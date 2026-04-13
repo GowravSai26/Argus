@@ -1,0 +1,182 @@
+[
+  {
+    "id": "eval_001",
+    "description": "Impossible travel — US card used in Nigeria 30 min after US transaction",
+    "expected": "BLOCK",
+    "transaction": {
+      "transaction_id": "txn_eval_001",
+      "card_id": "card_eval_001",
+      "merchant_id": "merch_eval_001",
+      "amount": 1200.00,
+      "merchant_category": "Electronics",
+      "merchant_country": "NG",
+      "merchant_city": "Lagos",
+      "cardholder_country": "US",
+      "timestamp": "2024-01-15T14:30:00+00:00",
+      "is_online": false,
+      "device_fingerprint": null
+    }
+  },
+  {
+    "id": "eval_002",
+    "description": "Normal grocery purchase in home country",
+    "expected": "ALLOW",
+    "transaction": {
+      "transaction_id": "txn_eval_002",
+      "card_id": "card_eval_002",
+      "merchant_id": "merch_eval_002",
+      "amount": 47.50,
+      "merchant_category": "Grocery",
+      "merchant_country": "US",
+      "merchant_city": "Chicago",
+      "cardholder_country": "US",
+      "timestamp": "2024-01-15T10:00:00+00:00",
+      "is_online": false,
+      "device_fingerprint": null
+    }
+  },
+  {
+    "id": "eval_003",
+    "description": "High-value electronics purchase at new merchant in high-risk country",
+    "expected": "BLOCK",
+    "transaction": {
+      "transaction_id": "txn_eval_003",
+      "card_id": "card_eval_003",
+      "merchant_id": "merch_eval_003",
+      "amount": 4500.00,
+      "merchant_category": "Electronics",
+      "merchant_country": "RO",
+      "merchant_city": "Bucharest",
+      "cardholder_country": "US",
+      "timestamp": "2024-01-15T02:15:00+00:00",
+      "is_online": true,
+      "device_fingerprint": "fp_suspicious_001"
+    }
+  },
+  {
+    "id": "eval_004",
+    "description": "Regular coffee shop purchase — card owner travels frequently",
+    "expected": "ALLOW",
+    "transaction": {
+      "transaction_id": "txn_eval_004",
+      "card_id": "card_eval_004",
+      "merchant_id": "merch_eval_004",
+      "amount": 6.50,
+      "merchant_category": "Coffee Shop",
+      "merchant_country": "GB",
+      "merchant_city": "London",
+      "cardholder_country": "GB",
+      "timestamp": "2024-01-15T08:45:00+00:00",
+      "is_online": false,
+      "device_fingerprint": null
+    }
+  },
+  {
+    "id": "eval_005",
+    "description": "Card testing pattern — 5 small transactions in 20 minutes",
+    "expected": "BLOCK",
+    "transaction": {
+      "transaction_id": "txn_eval_005",
+      "card_id": "card_eval_005",
+      "merchant_id": "merch_eval_005",
+      "amount": 1.00,
+      "merchant_category": "Gift Cards",
+      "merchant_country": "US",
+      "merchant_city": "Miami",
+      "cardholder_country": "US",
+      "timestamp": "2024-01-15T23:55:00+00:00",
+      "is_online": true,
+      "device_fingerprint": "fp_bot_001"
+    }
+  },
+  {
+    "id": "eval_006",
+    "description": "Ambiguous — moderate amount, cross-border but plausible travel",
+    "expected": "ESCALATE",
+    "transaction": {
+      "transaction_id": "txn_eval_006",
+      "card_id": "card_eval_006",
+      "merchant_id": "merch_eval_006",
+      "amount": 350.00,
+      "merchant_category": "Restaurant",
+      "merchant_country": "FR",
+      "merchant_city": "Paris",
+      "cardholder_country": "GB",
+      "timestamp": "2024-01-15T19:30:00+00:00",
+      "is_online": false,
+      "device_fingerprint": null
+    }
+  },
+  {
+    "id": "eval_007",
+    "description": "Crypto exchange purchase — high risk category, large amount",
+    "expected": "BLOCK",
+    "transaction": {
+      "transaction_id": "txn_eval_007",
+      "card_id": "card_eval_007",
+      "merchant_id": "merch_eval_007",
+      "amount": 9800.00,
+      "merchant_category": "Crypto Exchange",
+      "merchant_country": "US",
+      "merchant_city": "New York",
+      "cardholder_country": "US",
+      "timestamp": "2024-01-15T15:00:00+00:00",
+      "is_online": true,
+      "device_fingerprint": "fp_crypto_001"
+    }
+  },
+  {
+    "id": "eval_008",
+    "description": "Pharmacy purchase — low amount, home country",
+    "expected": "ALLOW",
+    "transaction": {
+      "transaction_id": "txn_eval_008",
+      "card_id": "card_eval_008",
+      "merchant_id": "merch_eval_008",
+      "amount": 23.99,
+      "merchant_category": "Pharmacy",
+      "merchant_country": "US",
+      "merchant_city": "Seattle",
+      "cardholder_country": "US",
+      "timestamp": "2024-01-15T11:20:00+00:00",
+      "is_online": false,
+      "device_fingerprint": null
+    }
+  },
+  {
+    "id": "eval_009",
+    "description": "Wire transfer at odd hour from foreign country",
+    "expected": "BLOCK",
+    "transaction": {
+      "transaction_id": "txn_eval_009",
+      "card_id": "card_eval_009",
+      "merchant_id": "merch_eval_009",
+      "amount": 15000.00,
+      "merchant_category": "Wire Transfer",
+      "merchant_country": "PK",
+      "merchant_city": "Karachi",
+      "cardholder_country": "US",
+      "timestamp": "2024-01-15T03:22:00+00:00",
+      "is_online": true,
+      "device_fingerprint": "fp_wire_001"
+    }
+  },
+  {
+    "id": "eval_010",
+    "description": "Utilities bill payment — predictable recurring charge",
+    "expected": "ALLOW",
+    "transaction": {
+      "transaction_id": "txn_eval_010",
+      "card_id": "card_eval_010",
+      "merchant_id": "merch_eval_010",
+      "amount": 112.00,
+      "merchant_category": "Utilities",
+      "merchant_country": "US",
+      "merchant_city": "Boston",
+      "cardholder_country": "US",
+      "timestamp": "2024-01-15T09:00:00+00:00",
+      "is_online": true,
+      "device_fingerprint": "fp_utility_001"
+    }
+  }
+]
