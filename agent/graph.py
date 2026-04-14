@@ -20,7 +20,7 @@ from __future__ import annotations
 import time
 from typing import Any, TypedDict
 
-from langchain_anthropic import ChatAnthropic
+from langchain_groq import ChatGroq
 from langsmith import traceable
 from langgraph.graph import END, START, StateGraph
 
@@ -160,10 +160,9 @@ async def node_synthesise(state: InvestigationState) -> dict[str, Any]:
     import json
     import os
 
-    llm = ChatAnthropic(
-        model="claude-sonnet-4-20250514",
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
-        max_tokens=1024,
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        api_key=os.getenv("GROQ_API_KEY"),
     )
 
     txn = state["transaction"]

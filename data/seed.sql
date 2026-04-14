@@ -1,3 +1,111 @@
+-- Schema
+CREATE TABLE IF NOT EXISTS transactions (
+    transaction_id      TEXT PRIMARY KEY,
+    card_id             TEXT NOT NULL,
+    merchant_id         TEXT NOT NULL,
+    amount              NUMERIC(12, 2) NOT NULL,
+    merchant_category   TEXT NOT NULL,
+    merchant_country    TEXT NOT NULL,
+    merchant_city       TEXT NOT NULL,
+    cardholder_country  TEXT NOT NULL,
+    timestamp           TIMESTAMPTZ NOT NULL,
+    is_online           BOOLEAN NOT NULL DEFAULT FALSE,
+    is_fraud            BOOLEAN NOT NULL DEFAULT FALSE,
+    device_fingerprint  TEXT
+);
+
+CREATE TABLE IF NOT EXISTS merchants (
+    merchant_id             TEXT PRIMARY KEY,
+    merchant_name           TEXT NOT NULL,
+    category                TEXT NOT NULL,
+    country                 TEXT NOT NULL,
+    fraud_rate              NUMERIC(6, 4) NOT NULL DEFAULT 0.01,
+    chargeback_rate         NUMERIC(6, 4) NOT NULL DEFAULT 0.005,
+    is_high_risk            BOOLEAN NOT NULL DEFAULT FALSE,
+    days_since_first_seen   INT NOT NULL DEFAULT 365
+);
+
+INSERT INTO merchants (merchant_id, merchant_name, category, country, fraud_rate, chargeback_rate, is_high_risk, days_since_first_seen)
+SELECT DISTINCT ON (merchant_id)
+    merchant_id, merchant_id, merchant_category, merchant_country,
+    CASE WHEN merchant_category IN ('Electronics','Jewelry','Gift Cards','Crypto Exchange','Wire Transfer','Gambling','Adult Entertainment') THEN 0.07 ELSE 0.01 END,
+    CASE WHEN merchant_category IN ('Electronics','Jewelry','Gift Cards','Crypto Exchange','Wire Transfer','Gambling','Adult Entertainment') THEN 0.04 ELSE 0.005 END,
+    merchant_category IN ('Electronics','Jewelry','Gift Cards','Crypto Exchange','Wire Transfer','Gambling','Adult Entertainment'),
+    365
+FROM transactions ON CONFLICT DO NOTHING;
+
+-- Schema
+CREATE TABLE IF NOT EXISTS transactions (
+    transaction_id      TEXT PRIMARY KEY,
+    card_id             TEXT NOT NULL,
+    merchant_id         TEXT NOT NULL,
+    amount              NUMERIC(12, 2) NOT NULL,
+    merchant_category   TEXT NOT NULL,
+    merchant_country    TEXT NOT NULL,
+    merchant_city       TEXT NOT NULL,
+    cardholder_country  TEXT NOT NULL,
+    timestamp           TIMESTAMPTZ NOT NULL,
+    is_online           BOOLEAN NOT NULL DEFAULT FALSE,
+    is_fraud            BOOLEAN NOT NULL DEFAULT FALSE,
+    device_fingerprint  TEXT
+);
+
+CREATE TABLE IF NOT EXISTS merchants (
+    merchant_id             TEXT PRIMARY KEY,
+    merchant_name           TEXT NOT NULL,
+    category                TEXT NOT NULL,
+    country                 TEXT NOT NULL,
+    fraud_rate              NUMERIC(6, 4) NOT NULL DEFAULT 0.01,
+    chargeback_rate         NUMERIC(6, 4) NOT NULL DEFAULT 0.005,
+    is_high_risk            BOOLEAN NOT NULL DEFAULT FALSE,
+    days_since_first_seen   INT NOT NULL DEFAULT 365
+);
+
+INSERT INTO merchants (merchant_id, merchant_name, category, country, fraud_rate, chargeback_rate, is_high_risk, days_since_first_seen)
+SELECT DISTINCT ON (merchant_id)
+    merchant_id, merchant_id, merchant_category, merchant_country,
+    CASE WHEN merchant_category IN ('Electronics','Jewelry','Gift Cards','Crypto Exchange','Wire Transfer','Gambling','Adult Entertainment') THEN 0.07 ELSE 0.01 END,
+    CASE WHEN merchant_category IN ('Electronics','Jewelry','Gift Cards','Crypto Exchange','Wire Transfer','Gambling','Adult Entertainment') THEN 0.04 ELSE 0.005 END,
+    merchant_category IN ('Electronics','Jewelry','Gift Cards','Crypto Exchange','Wire Transfer','Gambling','Adult Entertainment'),
+    365
+FROM transactions ON CONFLICT DO NOTHING;
+
+-- Schema
+CREATE TABLE IF NOT EXISTS transactions (
+    transaction_id      TEXT PRIMARY KEY,
+    card_id             TEXT NOT NULL,
+    merchant_id         TEXT NOT NULL,
+    amount              NUMERIC(12, 2) NOT NULL,
+    merchant_category   TEXT NOT NULL,
+    merchant_country    TEXT NOT NULL,
+    merchant_city       TEXT NOT NULL,
+    cardholder_country  TEXT NOT NULL,
+    timestamp           TIMESTAMPTZ NOT NULL,
+    is_online           BOOLEAN NOT NULL DEFAULT FALSE,
+    is_fraud            BOOLEAN NOT NULL DEFAULT FALSE,
+    device_fingerprint  TEXT
+);
+
+CREATE TABLE IF NOT EXISTS merchants (
+    merchant_id             TEXT PRIMARY KEY,
+    merchant_name           TEXT NOT NULL,
+    category                TEXT NOT NULL,
+    country                 TEXT NOT NULL,
+    fraud_rate              NUMERIC(6, 4) NOT NULL DEFAULT 0.01,
+    chargeback_rate         NUMERIC(6, 4) NOT NULL DEFAULT 0.005,
+    is_high_risk            BOOLEAN NOT NULL DEFAULT FALSE,
+    days_since_first_seen   INT NOT NULL DEFAULT 365
+);
+
+INSERT INTO merchants (merchant_id, merchant_name, category, country, fraud_rate, chargeback_rate, is_high_risk, days_since_first_seen)
+SELECT DISTINCT ON (merchant_id)
+    merchant_id, merchant_id, merchant_category, merchant_country,
+    CASE WHEN merchant_category IN ('Electronics','Jewelry','Gift Cards','Crypto Exchange','Wire Transfer','Gambling','Adult Entertainment') THEN 0.07 ELSE 0.01 END,
+    CASE WHEN merchant_category IN ('Electronics','Jewelry','Gift Cards','Crypto Exchange','Wire Transfer','Gambling','Adult Entertainment') THEN 0.04 ELSE 0.005 END,
+    merchant_category IN ('Electronics','Jewelry','Gift Cards','Crypto Exchange','Wire Transfer','Gambling','Adult Entertainment'),
+    365
+FROM transactions ON CONFLICT DO NOTHING;
+
 -- Auto-generated by data/generate.py
 -- Do not edit manually
 

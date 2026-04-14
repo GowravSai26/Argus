@@ -45,12 +45,12 @@ async def get_cardholder_profile(
         rows = await conn.fetch(
             """
             SELECT amount, merchant_category, merchant_country,
-                   is_fraud, created_at
+                   is_fraud, timestamp
             FROM transactions
             WHERE card_id = $1
               AND transaction_id != $2
               AND timestamp >= $3
-            ORDER BY created_at DESC
+            ORDER BY timestamp DESC
             """,
             card_id,
             current_transaction_id,
@@ -69,7 +69,7 @@ async def get_cardholder_profile(
 
         account_row = await conn.fetchrow(
             """
-            SELECT MIN(created_at) as first_seen
+            SELECT MIN(timestamp) as first_seen
             FROM transactions
             WHERE card_id = $1
             """,
