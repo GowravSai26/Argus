@@ -197,9 +197,12 @@ Based on all evidence above, respond with a JSON object in exactly this format:
 }}
 
 Decision guide:
-- BLOCK: Strong fraud signals, high confidence (confidence >= 0.75)
-- ALLOW: Clean profile, no significant signals (confidence >= 0.75)
-- ESCALATE: Ambiguous evidence, human review needed (confidence < 0.75)
+CRITICAL RULE: "No transaction history", "unknown merchant", and "no historical profile" are NOT fraud signals by themselves. New cards and new merchants are normal. Never ESCALATE based solely on these.
+
+Decision guide:
+- ALLOW (confidence 0.80): transaction_country == cardholder_country AND category is everyday (Grocery, Pharmacy, Utilities, Coffee Shop, Restaurant, Gas Station, Healthcare, Clothing). Always ALLOW these unless velocity or impossible travel is detected.
+- BLOCK (confidence 0.90): ANY of — impossible travel | velocity abuse (card testing) | high-risk category (Crypto Exchange, Wire Transfer, Gift Cards, Electronics, Jewelry) AND cross-border to risky country (NG, RO, UA, VN, PK, RU) | amount > $1000 cross-border
+- ESCALATE: Only genuine ambiguity — cross-border to non-risky country with moderate amount.
 
 Respond with valid JSON only. No preamble, no explanation outside the JSON."""
 
@@ -208,7 +211,7 @@ Respond with valid JSON only. No preamble, no explanation outside the JSON."""
 
     # Parse Claude's response
     import re
-    json_match = re.search(r"\{.*\}", content, re.DOTALL)
+    json_match = re.search(r"\{[^{}]*\}", content, re.DOTALL)
     if not json_match:
         raise ValueError(f"Claude returned non-JSON response: {content}")
 
