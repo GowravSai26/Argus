@@ -425,7 +425,7 @@ async function investigate() {
     const res = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ transaction: payload })
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
