@@ -112,9 +112,38 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
 .report-box::-webkit-scrollbar-track{background:transparent}
 .report-box::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
 
-.error-box{background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:1.25rem;font-family:'JetBrains Mono',monospace;font-size:12px;color:#EF4444;line-height:1.7;margin-bottom:1rem}
-.error-box code{background:rgba(239,68,68,0.1);padding:2px 6px;border-radius:4px;font-size:11px}
+.error-box{
+  background:rgba(239,68,68,0.06);
+  border:1px solid rgba(239,68,68,0.2);
+  border-radius:10px;
+  padding:1.25rem;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:#EF4444;
+  line-height:1.7;
+  margin-bottom:1rem;
 
+  /* 🔥 FIXES */
+  max-height:200px;
+  overflow-y:auto;
+  word-break:break-word;
+}
+
+/* optional scrollbar styling (makes it premium) */
+.error-box::-webkit-scrollbar{
+  width:4px;
+}
+.error-box::-webkit-scrollbar-thumb{
+  background:rgba(239,68,68,0.3);
+  border-radius:999px;
+}
+
+.error-box code{
+  background:rgba(239,68,68,0.1);
+  padding:2px 6px;
+  border-radius:4px;
+  font-size:10px;
+}
 .how-section{margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border)}
 .how-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:1.25rem}
 .how-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem}
