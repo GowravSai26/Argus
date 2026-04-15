@@ -391,47 +391,74 @@ async function investigate() {
   const output = document.getElementById('output');
   const errBox = document.getElementById('errorBox');
   let payload;
-  try { payload = JSON.parse(document.getElementById('payload').value); }
-  catch(e) { errBox.innerHTML = '<strong>Invalid JSON</strong> — please check the payload format.'; errBox.style.display='block'; return; }
 
-  btn.disabled=true; btn.classList.add('loading'); btn.textContent='Investigating...';
-  output.classList.remove('visible'); errBox.style.display='none';
+  try {
+    payload = JSON.parse(document.getElementById('payload').value);
+  } catch(e) {
+    errBox.innerHTML = '<strong>Invalid JSON</strong> — please check the payload format.';
+    errBox.style.display='block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.textContent = 'Investigating...';
+  output.classList.remove('visible');
+  errBox.style.display = 'none';
 
   try {
     const res = await fetch(API, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+
+      // ✅ FIX IS HERE
+      body: JSON.stringify({
+        transaction: payload
+      })
     });
-    if(!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
+
+    if (!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
     const data = await res.json();
 
-    const verdict = (data.verdict||data.recommendation||data.decision||data.result||'UNKNOWN').toUpperCase();
-    const confidence = data.confidence||data.confidence_score||data.score||0;
-    const report = data.investigation_report||data.report||data.reasoning||data.summary||data.explanation||JSON.stringify(data,null,2);
+    const verdict = (data.verdict || data.recommendation || data.decision || data.result || 'UNKNOWN').toUpperCase();
+    const confidence = data.confidence || data.confidence_score || data.score || 0;
+    const report = data.investigation_report || data.report || data.reasoning || data.summary || data.explanation || JSON.stringify(data, null, 2);
 
     document.getElementById('caseLabel').textContent = `Case #${payload.transaction_id}`;
-    const vb = document.getElementById('verdictBadge');
-    vb.textContent = verdict; vb.className = `verdict-badge ${verdict}`;
-    const vt = document.getElementById('verdictText');
-    vt.textContent = verdict; vt.className = `verdict-text ${verdict}`;
 
-    const pct = Math.round(confidence*100);
+    const vb = document.getElementById('verdictBadge');
+    vb.textContent = verdict;
+    vb.className = `verdict-badge ${verdict}`;
+
+    const vt = document.getElementById('verdictText');
+    vt.textContent = verdict;
+    vt.className = `verdict-text ${verdict}`;
+
+    const pct = Math.round(confidence * 100);
     document.getElementById('confFill').style.cssText = `width:${pct}%;background:${getColor(verdict)}`;
     document.getElementById('confLabel').textContent = `Confidence: ${pct}%`;
 
     renderFindings(data);
-    document.getElementById('reportBox').textContent = typeof report==='string'?report:JSON.stringify(report,null,2);
+
+    document.getElementById('reportBox').textContent =
+      typeof report === 'string' ? report : JSON.stringify(report, null, 2);
+
     output.classList.add('visible');
-    output.scrollIntoView({behavior:'smooth',block:'nearest'});
+    output.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
   } catch(e) {
     const isCors = e.message.includes('Failed to fetch') || e.message.includes('NetworkError');
+
     errBox.innerHTML = isCors
-      ? `<strong>CORS Error</strong> — Your FastAPI backend needs CORS enabled.<br><br>Add this to your <code>main.py</code>:<br><br><code>from fastapi.middleware.cors import CORSMiddleware</code><br><code>app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])</code><br><br>Then redeploy to Railway.`
+      ? `<strong>CORS Error</strong> — Enable CORS in FastAPI`
       : `<strong>Error</strong> — ${e.message}`;
-    errBox.style.display='block';
+
+    errBox.style.display = 'block';
+
   } finally {
-    btn.disabled=false; btn.classList.remove('loading'); btn.textContent='⟶   Run Argus Investigation';
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.textContent = '⟶   Run Argus Investigation';
   }
 }
 </script>
