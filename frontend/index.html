@@ -228,6 +228,7 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
       </div>
       <div class="findings-title">Investigation Findings</div>
       <div id="findingsArea"></div>
+      <div id="riskSignals" style="margin-top:15px;"></div>
       <div class="report-box" id="reportBox"></div>
     </div>
   </div>
@@ -285,6 +286,26 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
 </div>
 
 <script>
+
+    function renderRiskSignals(result) {
+  const el = document.getElementById('riskSignals');
+  const signals = result.risk_signals || [];
+
+  if (!signals.length) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="findings-title">⚠️ Risk Signals</div>
+    ${signals.map(s => `
+      <div class="finding">
+        <div class="finding-icon flag">!</div>
+        <div class="finding-text">${s}</div>
+      </div>
+    `).join('')}
+  `;
+}
 const API = 'https://argus-production-7aa3.up.railway.app/investigate';
 
 const scenarios = {
@@ -459,6 +480,7 @@ async function investigate() {
 
     // ✅ FIX: use result not data
     renderFindings(result);
+    renderRiskSignals(result);
 
     document.getElementById('reportBox').textContent =
       typeof report === 'string' ? report : JSON.stringify(report, null, 2);
