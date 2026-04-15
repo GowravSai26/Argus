@@ -391,22 +391,38 @@ function renderToolResults(result) {
         ${Object.entries(data).map(([k, v]) => {
           let displayValue = '';
 
+          // ✅ BOOLEAN HANDLING (FIXED)
           if (typeof v === 'boolean') {
             displayValue = v
-              ? '<span style="color:#EF4444;">YES</span>'
-              : '<span style="color:#10B981;">NO</span>';
+              ? '<span style="color:#EF4444;">YES</span>'   // true = risk → red
+              : '<span style="color:#10B981;">NO</span>';   // false = safe → green
           } 
+
+          // ✅ PERCENT FORMAT
           else if (k.includes('percent')) {
-            displayValue = v + '%';
+            displayValue = `<span style="color:#F59E0B;">${v}%</span>`;
           } 
+
+          // ✅ ARRAY (risk signals etc.)
           else if (Array.isArray(v)) {
-            displayValue = v.join(', ');
+            displayValue = v.length
+              ? `<span style="color:#EF4444;">${v.join(', ')}</span>`
+              : `<span style="color:#10B981;">None</span>`;
           } 
+
+          // ✅ OBJECT
           else if (typeof v === 'object' && v !== null) {
-            displayValue = JSON.stringify(v);
+            displayValue = `<span style="color:#aaa;">${JSON.stringify(v)}</span>`;
           } 
+
+          // ✅ NUMBERS (amount, counts)
+          else if (typeof v === 'number') {
+            displayValue = `<span style="color:#fff;">${v}</span>`;
+          }
+
+          // ✅ DEFAULT STRING
           else {
-            displayValue = v;
+            displayValue = `<span style="color:#fff;">${v}</span>`;
           }
 
           return `
@@ -421,7 +437,7 @@ function renderToolResults(result) {
               <span style="color:#888;">
                 ${k.replaceAll('_',' ')}
               </span>
-              <span style="color:#fff;">
+              <span>
                 ${displayValue}
               </span>
             </div>
