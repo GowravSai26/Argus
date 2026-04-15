@@ -50,6 +50,23 @@ When a suspicious transaction is flagged, Argus:
 
 Total time: **< 2.5 seconds**. Every step is traced in LangSmith.
 
+## ✨ Features
+
+- 🔍 Real-time fraud investigation (< 2.5s)
+- 🧠 Multi-tool reasoning pipeline:
+  - Transaction history analysis
+  - Merchant risk scoring
+  - Velocity anomaly detection
+  - Geolocation plausibility checks
+  - Cardholder behavioral profiling
+- ⚠️ Clear risk signal extraction (human-readable)
+- 📊 Structured investigation breakdown (per tool)
+- 🎯 Final verdict: `ALLOW` · `BLOCK` · `ESCALATE`
+- 📈 Confidence scoring for every decision
+- 🎨 Interactive UI with:
+  - Risk signals panel
+  - Investigation breakdown dashboard
+  - Smooth result animations
 ---
 
 ## Evaluation Results
@@ -270,18 +287,37 @@ Submit a transaction for autonomous investigation.
 **Response:**
 ```json
 {
-  "verdict": "BLOCK",
-  "confidence": 0.90,
-  "findings": [
-    "Impossible travel: card used in US at 14:00, Nigeria at 14:30 — 8,000km in 30 minutes",
-    "High-risk merchant category: Electronics in elevated-risk country",
-    "Transaction amount $1,850 exceeds cardholder's 90-day average by 340%"
+  "recommendation": "BLOCK",
+  "confidence_score": 0.90,
+  "risk_level": "CRITICAL",
+  "reasoning": "The transaction is flagged due to multiple high-risk factors including cross-border usage, high-risk merchant category, and high transaction amount.",
+  "risk_signals": [
+    "Cross-border transaction: card from US, used in NG",
+    "High-risk merchant category: Electronics",
+    "No transaction history found — new or inactive card"
   ],
-  "investigation_report": "Full reasoning chain...",
-  "tools_invoked": ["get_transaction_history", "check_geolocation_plausibility", "check_merchant_risk", "get_cardholder_profile"],
-  "investigation_time_ms": 1847
+  "tool_results": {
+    "transaction_history": {
+      "total_transactions_30d": 0,
+      "total_spend_30d": 0
+    },
+    "merchant_risk": {
+      "fraud_rate_percent": 5,
+      "is_high_risk_category": true
+    },
+    "velocity": {
+      "transactions_last_1h": 0
+    },
+    "geolocation": {
+      "is_cross_border": true,
+      "is_impossible_travel": false
+    },
+    "cardholder_profile": {
+      "account_age_days": 0
+    }
+  },
+  "duration_ms": 1847
 }
-```
 
 Full interactive docs: **[argus-production-7aa3.up.railway.app/docs](https://argus-production-7aa3.up.railway.app/docs)**
 
