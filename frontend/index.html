@@ -141,13 +141,32 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
 </head>
 <body>
 
-<div class="hero">
+<div class="hero" style="position:relative;">
+
+  <div style="
+    position:absolute;
+    top:16px;
+    right:16px;
+    background:rgba(16,185,129,0.15);
+    color:#10B981;
+    padding:6px 12px;
+    font-size:11px;
+    border-radius:999px;
+    font-family:'JetBrains Mono',monospace;
+    border:1px solid rgba(16,185,129,0.3);
+    backdrop-filter: blur(6px);
+  ">
+    ● LIVE
+  </div>
+
   <div class="eye-icon">
     <div class="eye-ring"><div class="eye-inner"></div></div>
   </div>
+
   <div class="hero-label">Autonomous Fraud Investigation Agent</div>
   <h1>ARG<span>U</span>S</h1>
   <div class="hero-tagline">// 100 eyes on every transaction. Never sleeps. Never misses.</div>
+
   <div class="stats-bar">
     <div class="stat">
       <div class="stat-val green">100%</div>
@@ -166,6 +185,7 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
       <div class="stat-label">Avg Response</div>
     </div>
   </div>
+
 </div>
 
 <div class="main">
@@ -223,6 +243,7 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
       <div class="verdict-hero">
         <div class="verdict-label">Agent Verdict</div>
         <div class="verdict-text" id="verdictText"></div>
+        <div id="riskLevelBadge" style="margin-top:10px; font-family:'JetBrains Mono', monospace; font-size:12px;"></div>
         <div class="confidence-bar"><div class="confidence-fill" id="confFill"></div></div>
         <div class="confidence-label" id="confLabel"></div>
       </div>
@@ -492,14 +513,14 @@ async function investigate() {
 
     const data = await res.json();
 
-    // ✅ FIX: handle nested response
+    // ✅ normalize response
     const result = data.report || data;
 
     const verdict = (result.recommendation || result.verdict || result.decision || 'UNKNOWN').toUpperCase();
     const confidence = result.confidence_score || result.confidence || 0;
     const report = result.reasoning || JSON.stringify(result, null, 2);
 
-    // ✅ FIX: correct transaction id path
+    // ✅ case label fix
     document.getElementById('caseLabel').textContent =
       `Case #${payload.transaction?.transaction_id || payload.transaction_id || 'N/A'}`;
 
@@ -517,7 +538,31 @@ async function investigate() {
 
     document.getElementById('confLabel').textContent = `Confidence: ${pct}%`;
 
-    // ✅ FIX: use result not data
+    // 🔥 RISK LEVEL BADGE
+    const risk = (result.risk_level || 'UNKNOWN').toUpperCase();
+
+    const riskColors = {
+      CRITICAL: '#EF4444',
+      HIGH: '#F59E0B',
+      MEDIUM: '#3B82F6',
+      LOW: '#10B981',
+      UNKNOWN: '#6B7280'
+    };
+
+    const riskEl = document.getElementById('riskLevelBadge');
+    riskEl.innerHTML = `
+      <span style="
+        padding:4px 10px;
+        border-radius:6px;
+        font-size:11px;
+        border:1px solid ${riskColors[risk] || '#6B7280'};
+        color:${riskColors[risk] || '#6B7280'};
+      ">
+        ${risk}
+      </span>
+    `;
+
+    // ✅ UI rendering
     renderFindings(result);
     renderRiskSignals(result);
     renderToolResults(result);
