@@ -391,38 +391,35 @@ function renderToolResults(result) {
         ${Object.entries(data).map(([k, v]) => {
           let displayValue = '';
 
-          // ✅ BOOLEAN HANDLING (FIXED)
+          // ✅ Boolean (subtle, not aggressive)
           if (typeof v === 'boolean') {
-            displayValue = v
-              ? '<span style="color:#EF4444;">YES</span>'   // true = risk → red
-              : '<span style="color:#10B981;">NO</span>';   // false = safe → green
+            displayValue = v ? 'YES' : 'NO';
           } 
 
-          // ✅ PERCENT FORMAT
+          // ✅ Percent
           else if (k.includes('percent')) {
-            displayValue = `<span style="color:#F59E0B;">${v}%</span>`;
+            displayValue = `${v}%`;
           } 
 
-          // ✅ ARRAY (risk signals etc.)
+          // ✅ Array (only highlight if risk_signals)
           else if (Array.isArray(v)) {
-            displayValue = v.length
-              ? `<span style="color:#EF4444;">${v.join(', ')}</span>`
-              : `<span style="color:#10B981;">None</span>`;
+            if (k === 'risk_signals') {
+              displayValue = v.length
+                ? `<span style="color:#EF4444;">${v.join(', ')}</span>`
+                : `<span style="color:#10B981;">None</span>`;
+            } else {
+              displayValue = v.join(', ');
+            }
           } 
 
-          // ✅ OBJECT
+          // ✅ Object
           else if (typeof v === 'object' && v !== null) {
-            displayValue = `<span style="color:#aaa;">${JSON.stringify(v)}</span>`;
+            displayValue = JSON.stringify(v);
           } 
 
-          // ✅ NUMBERS (amount, counts)
-          else if (typeof v === 'number') {
-            displayValue = `<span style="color:#fff;">${v}</span>`;
-          }
-
-          // ✅ DEFAULT STRING
+          // ✅ Default
           else {
-            displayValue = `<span style="color:#fff;">${v}</span>`;
+            displayValue = v;
           }
 
           return `
@@ -437,7 +434,7 @@ function renderToolResults(result) {
               <span style="color:#888;">
                 ${k.replaceAll('_',' ')}
               </span>
-              <span>
+              <span style="color:#fff;">
                 ${displayValue}
               </span>
             </div>
