@@ -329,7 +329,6 @@ function renderRiskSignals(result) {
   `;
 }
 
-
 function renderToolResults(result) {
   const el = document.getElementById('toolResults');
   const tools = result.tool_results || {};
@@ -349,19 +348,41 @@ function renderToolResults(result) {
         border-radius:8px;
         background:#0E0E1A;
       ">
+
         <div style="
           font-weight:600;
-          margin-bottom:6px;
+          margin-bottom:10px;
           color:#F59E0B;
+          font-family:'JetBrains Mono', monospace;
+          font-size:12px;
         ">
           ${name.replaceAll('_',' ').toUpperCase()}
         </div>
 
-        <pre style="
-          font-size:11px;
-          color:#aaa;
-          white-space:pre-wrap;
-        ">${JSON.stringify(data, null, 2)}</pre>
+        ${Object.entries(data).map(([k, v]) => `
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            padding:4px 0;
+            border-bottom:1px solid rgba(255,255,255,0.05);
+            font-size:11px;
+            font-family:'JetBrains Mono', monospace;
+          ">
+            <span style="color:#888;">
+              ${k.replaceAll('_',' ')}
+            </span>
+            <span style="color:#fff;">
+              ${
+                Array.isArray(v)
+                  ? v.join(', ')
+                  : (typeof v === 'object' && v !== null
+                      ? JSON.stringify(v)
+                      : v)
+              }
+            </span>
+          </div>
+        `).join('')}
+
       </div>
     `).join('')}
   `;
