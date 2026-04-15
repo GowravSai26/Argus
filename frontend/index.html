@@ -403,19 +403,21 @@ async function investigate() {
   const btn = document.getElementById('runBtn');
   const output = document.getElementById('output');
   const errBox = document.getElementById('errorBox');
+
   let payload;
 
   try {
     payload = JSON.parse(document.getElementById('payload').value);
-  } catch(e) {
+  } catch (e) {
     errBox.innerHTML = '<strong>Invalid JSON</strong> — please check the payload format.';
-    errBox.style.display='block';
+    errBox.style.display = 'block';
     return;
   }
 
   btn.disabled = true;
   btn.classList.add('loading');
   btn.textContent = 'Investigating...';
+
   output.classList.remove('visible');
   errBox.style.display = 'none';
 
@@ -423,21 +425,23 @@ async function investigate() {
     const res = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-
-      // ✅ FIX IS HERE
-      body: JSON.stringify({
-        transaction: payload
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
+
     const data = await res.json();
 
-    const verdict = (data.verdict || data.recommendation || data.decision || data.result || 'UNKNOWN').toUpperCase();
-    const confidence = data.confidence || data.confidence_score || data.score || 0;
-    const report = data.investigation_report || data.report || data.reasoning || data.summary || data.explanation || JSON.stringify(data, null, 2);
+    // ✅ FIX: handle nested response
+    const result = data.report || data;
 
-    document.getElementById('caseLabel').textContent = `Case #${payload.transaction_id}`;
+    const verdict = (result.recommendation || result.verdict || result.decision || 'UNKNOWN').toUpperCase();
+    const confidence = result.confidence_score || result.confidence || 0;
+    const report = result.reasoning || JSON.stringify(result, null, 2);
+
+    // ✅ FIX: correct transaction id path
+    document.getElementById('caseLabel').textContent =
+      `Case #${payload.transaction?.transaction_id || payload.transaction_id || 'N/A'}`;
 
     const vb = document.getElementById('verdictBadge');
     vb.textContent = verdict;
@@ -448,10 +452,13 @@ async function investigate() {
     vt.className = `verdict-text ${verdict}`;
 
     const pct = Math.round(confidence * 100);
-    document.getElementById('confFill').style.cssText = `width:${pct}%;background:${getColor(verdict)}`;
+    document.getElementById('confFill').style.cssText =
+      `width:${pct}%;background:${getColor(verdict)}`;
+
     document.getElementById('confLabel').textContent = `Confidence: ${pct}%`;
 
-    renderFindings(data);
+    // ✅ FIX: use result not data
+    renderFindings(result);
 
     document.getElementById('reportBox').textContent =
       typeof report === 'string' ? report : JSON.stringify(report, null, 2);
@@ -459,8 +466,10 @@ async function investigate() {
     output.classList.add('visible');
     output.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-  } catch(e) {
-    const isCors = e.message.includes('Failed to fetch') || e.message.includes('NetworkError');
+  } catch (e) {
+    const isCors =
+      e.message.includes('Failed to fetch') ||
+      e.message.includes('NetworkError');
 
     errBox.innerHTML = isCors
       ? `<strong>CORS Error</strong> — Enable CORS in FastAPI`
