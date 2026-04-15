@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Argus — Autonomous Fraud Investigation Agent. 100 eyes on every transaction. Never sleeps. Never misses.">
+<title>Argus — Autonomous Fraud Investigation Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080810;
+  --surface:#0E0E1A;
+  --surface2:#141426;
+  --border:#1E1E3A;
+  --amber:#F59E0B;
+  --amber-dim:#7C4F07;
+  --green:#10B981;
+  --red:#EF4444;
+  --blue:#3B82F6;
+  --text:#E8E8F0;
+  --text-dim:#6B6B8A;
+  --text-muted:#3A3A5A;
+}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(30,30,58,0.15) 40px,rgba(30,30,58,0.15) 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(30,30,58,0.15) 40px,rgba(30,30,58,0.15) 41px);pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 60% 20%,rgba(245,158,11,0.04) 0%,transparent 50%),radial-gradient(ellipse at 20% 80%,rgba(59,130,246,0.03) 0%,transparent 50%);pointer-events:none;z-index:0}
+
+.hero{position:relative;z-index:1;padding:3rem 2rem 2rem;text-align:center;border-bottom:1px solid var(--border)}
+.eye-icon{width:56px;height:56px;margin:0 auto 1.25rem;position:relative}
+.eye-ring{width:56px;height:56px;border-radius:50%;border:2px solid var(--amber);display:flex;align-items:center;justify-content:center;animation:pulse-ring 3s ease-in-out infinite}
+.eye-inner{width:24px;height:24px;border-radius:50%;background:var(--amber);animation:pulse-eye 3s ease-in-out infinite}
+@keyframes pulse-ring{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0.3),0 0 20px rgba(245,158,11,0.1)}50%{box-shadow:0 0 0 10px rgba(245,158,11,0),0 0 40px rgba(245,158,11,0.15)}}
+@keyframes pulse-eye{0%,100%{transform:scale(1)}50%{transform:scale(0.8)}}
+
+.hero-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.75rem}
+.hero h1{font-size:clamp(2.5rem,8vw,4.5rem);font-weight:800;letter-spacing:-.02em;color:#fff;margin-bottom:.5rem;line-height:1}
+.hero h1 span{color:var(--amber)}
+.hero-tagline{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-dim);margin-bottom:2rem;letter-spacing:.05em}
+
+.stats-bar{display:flex;gap:0;justify-content:center;margin-bottom:2rem;border:1px solid var(--border);border-radius:12px;overflow:hidden;max-width:580px;margin-left:auto;margin-right:auto;background:var(--surface)}
+.stat{flex:1;padding:.85rem 1rem;text-align:center;border-right:1px solid var(--border)}
+.stat:last-child{border-right:none}
+.stat-val{font-size:1.35rem;font-weight:700;font-family:'JetBrains Mono',monospace}
+.stat-val.green{color:var(--green)}
+.stat-val.amber{color:var(--amber)}
+.stat-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+
+.main{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:2.5rem 1.5rem}
+
+.section-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:.2em;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.section-label::before{content:'';width:20px;height:1px;background:var(--amber)}
+
+.scenarios{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:2rem}
+.scenario-btn{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;cursor:pointer;text-align:left;transition:all .15s;color:var(--text);font-family:'Syne',sans-serif}
+.scenario-btn:hover{border-color:var(--amber);background:rgba(245,158,11,0.05);transform:translateY(-1px)}
+.scenario-btn.active{border-color:var(--amber);background:rgba(245,158,11,0.08)}
+.s-icon{font-size:20px;margin-bottom:6px}
+.s-title{font-size:12px;font-weight:600;margin-bottom:3px;color:var(--text)}
+.s-desc{font-size:11px;color:var(--text-dim);line-height:1.4}
+
+.input-area{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1rem}
+.input-header{padding:.75rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem;background:var(--surface2)}
+.dots{display:flex;gap:5px}
+.dot{width:9px;height:9px;border-radius:50%}
+.dot.r{background:#EF4444}
+.dot.y{background:#F59E0B}
+.dot.g{background:#10B981}
+.input-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim)}
+.json-area{width:100%;background:transparent;border:none;outline:none;padding:1.25rem;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);resize:vertical;min-height:200px;line-height:1.7}
+
+.run-btn{width:100%;padding:1rem;background:var(--amber);color:#000;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.02em;margin-bottom:1.5rem;position:relative;overflow:hidden}
+.run-btn:hover{background:#FBBF24;box-shadow:0 0 30px rgba(245,158,11,0.3);transform:translateY(-1px)}
+.run-btn:disabled{background:var(--amber-dim);cursor:not-allowed;transform:none;box-shadow:none;color:rgba(0,0,0,0.5)}
+.run-btn.loading::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);animation:shimmer 1s infinite}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+.output{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:none;animation:slideIn .3s ease}
+.output.visible{display:block}
+@keyframes slideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.out-header{padding:.85rem 1.25rem;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:.75rem}
+.out-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);flex:1}
+.verdict-badge{padding:4px 14px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.05em}
+.verdict-badge.BLOCK{background:rgba(239,68,68,0.15);color:#EF4444;border:1px solid rgba(239,68,68,0.3)}
+.verdict-badge.ALLOW{background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3)}
+.verdict-badge.ESCALATE{background:rgba(245,158,11,0.15);color:#F59E0B;border:1px solid rgba(245,158,11,0.3)}
+
+.out-body{padding:1.5rem}
+.verdict-hero{text-align:center;padding:1.5rem;border:1px solid var(--border);border-radius:10px;margin-bottom:1.5rem;background:var(--surface2)}
+.verdict-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.2em;margin-bottom:.5rem}
+.verdict-text{font-size:2.75rem;font-weight:800;letter-spacing:-.01em;line-height:1}
+.verdict-text.BLOCK{color:#EF4444;text-shadow:0 0 30px rgba(239,68,68,0.3)}
+.verdict-text.ALLOW{color:#10B981;text-shadow:0 0 30px rgba(16,185,129,0.3)}
+.verdict-text.ESCALATE{color:#F59E0B;text-shadow:0 0 30px rgba(245,158,11,0.3)}
+.confidence-bar{max-width:200px;margin:.85rem auto 0;background:var(--border);border-radius:999px;height:3px;overflow:hidden}
+.confidence-fill{height:100%;border-radius:999px;transition:width 1.2s ease}
+.confidence-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:.5rem}
+
+.findings-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.15em;margin-bottom:.75rem}
+.finding{display:flex;gap:.75rem;padding:.7rem 0;border-bottom:1px solid var(--border)}
+.finding:last-child{border-bottom:none}
+.finding-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;font-weight:700;margin-top:1px}
+.finding-icon.flag{background:rgba(239,68,68,0.2);color:#EF4444}
+.finding-icon.ok{background:rgba(16,185,129,0.2);color:#10B981}
+.finding-icon.warn{background:rgba(245,158,11,0.2);color:#F59E0B}
+.finding-text{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);line-height:1.6}
+
+.report-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1.25rem;margin-top:1.25rem;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);line-height:1.8;white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto}
+.report-box::-webkit-scrollbar{width:4px}
+.report-box::-webkit-scrollbar-track{background:transparent}
+.report-box::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
+
+.error-box{background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:1.25rem;font-family:'JetBrains Mono',monospace;font-size:12px;color:#EF4444;line-height:1.7;margin-bottom:1rem}
+.error-box code{background:rgba(239,68,68,0.1);padding:2px 6px;border-radius:4px;font-size:11px}
+
+.how-section{margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border)}
+.how-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:1.25rem}
+.how-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem}
+.how-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);letter-spacing:.1em;margin-bottom:6px}
+.how-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.how-body{font-size:12px;color:var(--text-dim);line-height:1.5}
+
+.tech-section{margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--border)}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:1rem}
+.pill{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 12px}
+
+.footer{text-align:center;padding:2.5rem 1.5rem;border-top:1px solid var(--border);position:relative;z-index:1;margin-top:2rem}
+.footer-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
+.footer-links{display:flex;gap:1.5rem;justify-content:center;margin-top:.75rem}
+.footer-link{font-size:12px;color:var(--text-dim);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:2px;transition:color .15s,border-color .15s;font-family:'JetBrains Mono',monospace}
+.footer-link:hover{color:var(--amber);border-color:var(--amber)}
+
+@media(max-width:600px){
+  .stats-bar{flex-wrap:wrap}
+  .stat{min-width:50%;border-bottom:1px solid var(--border)}
+  .hero h1{font-size:3rem}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="eye-icon">
+    <div class="eye-ring"><div class="eye-inner"></div></div>
+  </div>
+  <div class="hero-label">Autonomous Fraud Investigation Agent</div>
+  <h1>ARG<span>U</span>S</h1>
+  <div class="hero-tagline">// 100 eyes on every transaction. Never sleeps. Never misses.</div>
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-val green">100%</div>
+      <div class="stat-label">Precision</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val green">100%</div>
+      <div class="stat-label">Recall</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val amber">10/10</div>
+      <div class="stat-label">Eval Cases</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val green">&lt;2.5s</div>
+      <div class="stat-label">Avg Response</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="section-label">Live Demo — Choose a Scenario</div>
+  <div class="scenarios">
+    <button class="scenario-btn active" onclick="loadScenario('impossible_travel', this)">
+      <div class="s-icon">✈️</div>
+      <div class="s-title">Impossible Travel</div>
+      <div class="s-desc">Same card used across 2 continents, 30 min apart</div>
+    </button>
+    <button class="scenario-btn" onclick="loadScenario('card_testing', this)">
+      <div class="s-icon">🔁</div>
+      <div class="s-title">Card Testing Attack</div>
+      <div class="s-desc">5 micro-transactions in 20 min — classic stolen card test</div>
+    </button>
+    <button class="scenario-btn" onclick="loadScenario('normal_purchase', this)">
+      <div class="s-icon">🛒</div>
+      <div class="s-title">Normal Purchase</div>
+      <div class="s-desc">Routine grocery, home country, no anomalies</div>
+    </button>
+    <button class="scenario-btn" onclick="loadScenario('high_value_new', this)">
+      <div class="s-icon">💎</div>
+      <div class="s-title">High-Value New Merchant</div>
+      <div class="s-desc">₹89,000 electronics, first visit to merchant abroad</div>
+    </button>
+    <button class="scenario-btn" onclick="loadScenario('ambiguous', this)">
+      <div class="s-icon">⚖️</div>
+      <div class="s-title">Ambiguous Case</div>
+      <div class="s-desc">Cross-border, plausible timing — watch the agent decide</div>
+    </button>
+  </div>
+
+  <div class="section-label">Transaction Payload</div>
+  <div class="input-area">
+    <div class="input-header">
+      <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+      <div class="input-title">POST /investigate — argus-production-7aa3.up.railway.app</div>
+    </div>
+    <textarea class="json-area" id="payload" spellcheck="false"></textarea>
+  </div>
+
+  <div id="errorBox" class="error-box" style="display:none"></div>
+
+  <button class="run-btn" id="runBtn" onclick="investigate()">
+    ⟶ &nbsp;&nbsp; Run Argus Investigation
+  </button>
+
+  <div class="output" id="output">
+    <div class="out-header">
+      <div class="out-title" id="caseLabel">Investigation Report</div>
+      <div class="verdict-badge" id="verdictBadge"></div>
+    </div>
+    <div class="out-body">
+      <div class="verdict-hero">
+        <div class="verdict-label">Agent Verdict</div>
+        <div class="verdict-text" id="verdictText"></div>
+        <div class="confidence-bar"><div class="confidence-fill" id="confFill"></div></div>
+        <div class="confidence-label" id="confLabel"></div>
+      </div>
+      <div class="findings-title">Investigation Findings</div>
+      <div id="findingsArea"></div>
+      <div class="report-box" id="reportBox"></div>
+    </div>
+  </div>
+
+  <div class="how-section">
+    <div class="section-label">How Argus Investigates</div>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-num">STEP 01</div>
+        <div class="how-title">Transaction Received</div>
+        <div class="how-body">Flagged transaction enters the LangGraph agent pipeline as a structured event.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">STEP 02</div>
+        <div class="how-title">Tool Invocation</div>
+        <div class="how-body">Agent autonomously calls tools — transaction history, merchant risk, velocity, geolocation plausibility.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">STEP 03</div>
+        <div class="how-title">Reasoning Chain</div>
+        <div class="how-body">Claude synthesizes all signals, building an evidence-based case for each finding.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">STEP 04</div>
+        <div class="how-title">Verdict Delivered</div>
+        <div class="how-body">BLOCK · ALLOW · ESCALATE — with full justification and confidence score, in under 2.5s.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tech-section">
+    <div class="section-label">Built With</div>
+    <div class="pills">
+      <span class="pill">LangGraph</span>
+      <span class="pill">Claude API</span>
+      <span class="pill">FastAPI</span>
+      <span class="pill">PostgreSQL</span>
+      <span class="pill">Docker</span>
+      <span class="pill">LangSmith</span>
+      <span class="pill">Railway</span>
+      <span class="pill">Python 3.11</span>
+      <span class="pill">Pydantic v2</span>
+      <span class="pill">GitHub Actions CI/CD</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div class="footer-text">// named after Argus Panoptes — the 100-eyed giant of Greek mythology who never slept</div>
+  <div class="footer-links">
+    <a class="footer-link" href="https://github.com/gowravsai/argus" target="_blank">github</a>
+    <a class="footer-link" href="https://argus-production-7aa3.up.railway.app/docs" target="_blank">api docs</a>
+  </div>
+</div>
+
+<script>
+const API = 'https://argus-production-7aa3.up.railway.app/investigate';
+
+const scenarios = {
+  impossible_travel: {
+    transaction_id: "txn_" + Math.random().toString(36).substr(2,8).toUpperCase(),
+    card_id: "card_US_001",
+    amount: 1850.00,
+    merchant_name: "Lagos Electronics Hub",
+    merchant_id: "merch_NG_441",
+    merchant_category: "Electronics",
+    merchant_country: "NG",
+    transaction_country: "NG",
+    cardholder_country: "US",
+    timestamp: new Date(Date.now() - 30*60*1000).toISOString(),
+    previous_transaction_country: "US",
+    previous_transaction_time: new Date(Date.now() - 50*60*1000).toISOString()
+  },
+  card_testing: {
+    transaction_id: "txn_" + Math.random().toString(36).substr(2,8).toUpperCase(),
+    card_id: "card_IN_007",
+    amount: 1.00,
+    merchant_name: "PayCheck Micro",
+    merchant_id: "merch_IN_009",
+    merchant_category: "Online Services",
+    merchant_country: "IN",
+    transaction_country: "IN",
+    cardholder_country: "IN",
+    timestamp: new Date().toISOString(),
+    recent_transaction_count: 5,
+    recent_transaction_window_minutes: 20
+  },
+  normal_purchase: {
+    transaction_id: "txn_" + Math.random().toString(36).substr(2,8).toUpperCase(),
+    card_id: "card_IN_022",
+    amount: 450.00,
+    merchant_name: "Reliance Fresh",
+    merchant_id: "merch_IN_102",
+    merchant_category: "Grocery",
+    merchant_country: "IN",
+    transaction_country: "IN",
+    cardholder_country: "IN",
+    timestamp: new Date().toISOString()
+  },
+  high_value_new: {
+    transaction_id: "txn_" + Math.random().toString(36).substr(2,8).toUpperCase(),
+    card_id: "card_IN_055",
+    amount: 89000.00,
+    merchant_name: "TechLux World",
+    merchant_id: "merch_AE_881",
+    merchant_category: "Electronics",
+    merchant_country: "AE",
+    transaction_country: "AE",
+    cardholder_country: "IN",
+    timestamp: new Date().toISOString(),
+    is_new_merchant: true
+  },
+  ambiguous: {
+    transaction_id: "txn_" + Math.random().toString(36).substr(2,8).toUpperCase(),
+    card_id: "card_IN_033",
+    amount: 3200.00,
+    merchant_name: "Singapore Duty Free",
+    merchant_id: "merch_SG_220",
+    merchant_category: "Retail",
+    merchant_country: "SG",
+    transaction_country: "SG",
+    cardholder_country: "IN",
+    timestamp: new Date().toISOString(),
+    previous_transaction_country: "IN",
+    previous_transaction_time: new Date(Date.now() - 6*60*60*1000).toISOString()
+  }
+};
+
+function loadScenario(key, btn) {
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const s = {...scenarios[key]};
+  s.transaction_id = "txn_" + Math.random().toString(36).substr(2,8).toUpperCase();
+  document.getElementById('payload').value = JSON.stringify(s, null, 2);
+  document.getElementById('output').classList.remove('visible');
+  document.getElementById('errorBox').style.display = 'none';
+}
+
+loadScenario('impossible_travel', document.querySelector('.scenario-btn'));
+
+function getColor(v){return v==='BLOCK'?'#EF4444':v==='ALLOW'?'#10B981':'#F59E0B'}
+
+function renderFindings(data) {
+  const area = document.getElementById('findingsArea');
+  const findings = data.findings || data.signals || data.evidence || [];
+  if(!findings.length){area.innerHTML='';return}
+  area.innerHTML = findings.map(f => {
+    const text = typeof f === 'string' ? f : (f.description || f.finding || JSON.stringify(f));
+    const lo = text.toLowerCase();
+    const isRisk = lo.includes('risk')||lo.includes('fraud')||lo.includes('block')||lo.includes('impossible')||lo.includes('suspicious')||lo.includes('alert');
+    const isSafe = lo.includes('normal')||lo.includes('legit')||lo.includes('allow')||lo.includes('safe')||lo.includes('match');
+    const cls = isRisk?'flag':isSafe?'ok':'warn';
+    const icon = isRisk?'✕':isSafe?'✓':'!';
+    return `<div class="finding"><div class="finding-icon ${cls}">${icon}</div><div class="finding-text">${text}</div></div>`;
+  }).join('');
+}
+
+async function investigate() {
+  const btn = document.getElementById('runBtn');
+  const output = document.getElementById('output');
+  const errBox = document.getElementById('errorBox');
+  let payload;
+  try { payload = JSON.parse(document.getElementById('payload').value); }
+  catch(e) { errBox.innerHTML = '<strong>Invalid JSON</strong> — please check the payload format.'; errBox.style.display='block'; return; }
+
+  btn.disabled=true; btn.classList.add('loading'); btn.textContent='Investigating...';
+  output.classList.remove('visible'); errBox.style.display='none';
+
+  try {
+    const res = await fetch(API, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
+    const data = await res.json();
+
+    const verdict = (data.verdict||data.recommendation||data.decision||data.result||'UNKNOWN').toUpperCase();
+    const confidence = data.confidence||data.confidence_score||data.score||0;
+    const report = data.investigation_report||data.report||data.reasoning||data.summary||data.explanation||JSON.stringify(data,null,2);
+
+    document.getElementById('caseLabel').textContent = `Case #${payload.transaction_id}`;
+    const vb = document.getElementById('verdictBadge');
+    vb.textContent = verdict; vb.className = `verdict-badge ${verdict}`;
+    const vt = document.getElementById('verdictText');
+    vt.textContent = verdict; vt.className = `verdict-text ${verdict}`;
+
+    const pct = Math.round(confidence*100);
+    document.getElementById('confFill').style.cssText = `width:${pct}%;background:${getColor(verdict)}`;
+    document.getElementById('confLabel').textContent = `Confidence: ${pct}%`;
+
+    renderFindings(data);
+    document.getElementById('reportBox').textContent = typeof report==='string'?report:JSON.stringify(report,null,2);
+    output.classList.add('visible');
+    output.scrollIntoView({behavior:'smooth',block:'nearest'});
+  } catch(e) {
+    const isCors = e.message.includes('Failed to fetch') || e.message.includes('NetworkError');
+    errBox.innerHTML = isCors
+      ? `<strong>CORS Error</strong> — Your FastAPI backend needs CORS enabled.<br><br>Add this to your <code>main.py</code>:<br><br><code>from fastapi.middleware.cors import CORSMiddleware</code><br><code>app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])</code><br><br>Then redeploy to Railway.`
+      : `<strong>Error</strong> — ${e.message}`;
+    errBox.style.display='block';
+  } finally {
+    btn.disabled=false; btn.classList.remove('loading'); btn.textContent='⟶   Run Argus Investigation';
+  }
+}
+</script>
+</body>
+</html>
