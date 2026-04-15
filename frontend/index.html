@@ -229,6 +229,7 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
       <div class="findings-title">Investigation Findings</div>
       <div id="findingsArea"></div>
       <div id="riskSignals" style="margin-top:15px;"></div>
+      <div id="toolResults" style="margin-top:20px;"></div>
       <div class="report-box" id="reportBox"></div>
     </div>
   </div>
@@ -287,7 +288,7 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
 
 <script>
 
-    function renderRiskSignals(result) {
+function renderRiskSignals(result) {
   const el = document.getElementById('riskSignals');
   const signals = result.risk_signals || [];
 
@@ -302,6 +303,44 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
       <div class="finding">
         <div class="finding-icon flag">!</div>
         <div class="finding-text">${s}</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+
+function renderToolResults(result) {
+  const el = document.getElementById('toolResults');
+  const tools = result.tool_results || {};
+
+  if (!tools || Object.keys(tools).length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="findings-title">🧠 Investigation Breakdown</div>
+    ${Object.entries(tools).map(([name, data]) => `
+      <div style="
+        margin-bottom:12px;
+        padding:12px;
+        border:1px solid #1E1E3A;
+        border-radius:8px;
+        background:#0E0E1A;
+      ">
+        <div style="
+          font-weight:600;
+          margin-bottom:6px;
+          color:#F59E0B;
+        ">
+          ${name.replaceAll('_',' ').toUpperCase()}
+        </div>
+
+        <pre style="
+          font-size:11px;
+          color:#aaa;
+          white-space:pre-wrap;
+        ">${JSON.stringify(data, null, 2)}</pre>
       </div>
     `).join('')}
   `;
@@ -481,6 +520,7 @@ async function investigate() {
     // ✅ FIX: use result not data
     renderFindings(result);
     renderRiskSignals(result);
+    renderToolResults(result);
 
     document.getElementById('reportBox').textContent =
       typeof report === 'string' ? report : JSON.stringify(report, null, 2);
