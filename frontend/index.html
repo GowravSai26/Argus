@@ -166,6 +166,17 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
   .stat{min-width:50%;border-bottom:1px solid var(--border)}
   .hero h1{font-size:3rem}
 }
+
+    #output {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.4s ease;
+}
+
+#output.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
 </style>
 </head>
 <body>
