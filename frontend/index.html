@@ -296,12 +296,15 @@ const scenarios = {
     merchant_id: "merch_NG_441",
     merchant_category: "Electronics",
     merchant_country: "NG",
+    merchant_city: "Lagos",        // ✅ added
     transaction_country: "NG",
     cardholder_country: "US",
     timestamp: new Date(Date.now() - 30*60*1000).toISOString(),
+    is_online: false,              // ✅ added
     previous_transaction_country: "US",
     previous_transaction_time: new Date(Date.now() - 50*60*1000).toISOString()
   },
+
   card_testing: {
     transaction_id: "txn_" + Math.random().toString(36).substr(2,8).toUpperCase(),
     card_id: "card_IN_007",
@@ -310,12 +313,15 @@ const scenarios = {
     merchant_id: "merch_IN_009",
     merchant_category: "Online Services",
     merchant_country: "IN",
+    merchant_city: "Bangalore",    // ✅ added
     transaction_country: "IN",
     cardholder_country: "IN",
     timestamp: new Date().toISOString(),
+    is_online: true,               // ✅ added
     recent_transaction_count: 5,
     recent_transaction_window_minutes: 20
   },
+
   normal_purchase: {
     transaction_id: "txn_" + Math.random().toString(36).substr(2,8).toUpperCase(),
     card_id: "card_IN_022",
@@ -324,10 +330,13 @@ const scenarios = {
     merchant_id: "merch_IN_102",
     merchant_category: "Grocery",
     merchant_country: "IN",
+    merchant_city: "Hyderabad",    // ✅ added
     transaction_country: "IN",
     cardholder_country: "IN",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    is_online: false               // ✅ added
   },
+
   high_value_new: {
     transaction_id: "txn_" + Math.random().toString(36).substr(2,8).toUpperCase(),
     card_id: "card_IN_055",
@@ -336,11 +345,14 @@ const scenarios = {
     merchant_id: "merch_AE_881",
     merchant_category: "Electronics",
     merchant_country: "AE",
+    merchant_city: "Dubai",        // ✅ added
     transaction_country: "AE",
     cardholder_country: "IN",
     timestamp: new Date().toISOString(),
+    is_online: true,               // ✅ added
     is_new_merchant: true
   },
+
   ambiguous: {
     transaction_id: "txn_" + Math.random().toString(36).substr(2,8).toUpperCase(),
     card_id: "card_IN_033",
@@ -349,14 +361,15 @@ const scenarios = {
     merchant_id: "merch_SG_220",
     merchant_category: "Retail",
     merchant_country: "SG",
+    merchant_city: "Singapore",    // ✅ added
     transaction_country: "SG",
     cardholder_country: "IN",
     timestamp: new Date().toISOString(),
+    is_online: false,              // ✅ added
     previous_transaction_country: "IN",
     previous_transaction_time: new Date(Date.now() - 6*60*60*1000).toISOString()
   }
 };
-
 function loadScenario(key, btn) {
   document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
