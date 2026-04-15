@@ -319,11 +319,12 @@ Submit a transaction for autonomous investigation.
   "duration_ms": 1847
 }
 
+```
 Full interactive docs: **[argus-production-7aa3.up.railway.app/docs](https://argus-production-7aa3.up.railway.app/docs)**
 
 ---
 
-## The Name
+## The Name - ARGUS
 
 In Greek mythology, **Argus Panoptes** (Ἄργος Πανόπτης — "the all-seeing") was a giant with 100 eyes. He never slept. He was assigned to guard something of immense value, watching from every angle simultaneously.
 
@@ -333,7 +334,7 @@ Visa guards $13 trillion in annual payment volume. Argus watches every flagged t
 
 ## Author
 
-**Gowrav Sai Veeramallu**
-Agentic AI Engineer · Gen AI
+**Gowrav Sai Veeramallu**  
+Agentic AI Engineer · Gen AI  
 
-[LinkedIn](https://linkedin.com/in/gowravsai) · [GitHub](https://github.com/gowravsai)
+[LinkedIn](https://www.linkedin.com/in/Gowrav-Sai-Veeramallu) · [GitHub](https://github.com/GowravSai26)
