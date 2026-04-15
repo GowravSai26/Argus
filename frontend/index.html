@@ -388,29 +388,45 @@ function renderToolResults(result) {
           ${name.replaceAll('_',' ').toUpperCase()}
         </div>
 
-        ${Object.entries(data).map(([k, v]) => `
-          <div style="
-            display:flex;
-            justify-content:space-between;
-            padding:4px 0;
-            border-bottom:1px solid rgba(255,255,255,0.05);
-            font-size:11px;
-            font-family:'JetBrains Mono', monospace;
-          ">
-            <span style="color:#888;">
-              ${k.replaceAll('_',' ')}
-            </span>
-            <span style="color:#fff;">
-              ${
-                Array.isArray(v)
-                  ? v.join(', ')
-                  : (typeof v === 'object' && v !== null
-                      ? JSON.stringify(v)
-                      : v)
-              }
-            </span>
-          </div>
-        `).join('')}
+        ${Object.entries(data).map(([k, v]) => {
+          let displayValue = '';
+
+          if (typeof v === 'boolean') {
+            displayValue = v
+              ? '<span style="color:#EF4444;">YES</span>'
+              : '<span style="color:#10B981;">NO</span>';
+          } 
+          else if (k.includes('percent')) {
+            displayValue = v + '%';
+          } 
+          else if (Array.isArray(v)) {
+            displayValue = v.join(', ');
+          } 
+          else if (typeof v === 'object' && v !== null) {
+            displayValue = JSON.stringify(v);
+          } 
+          else {
+            displayValue = v;
+          }
+
+          return `
+            <div style="
+              display:flex;
+              justify-content:space-between;
+              padding:4px 0;
+              border-bottom:1px solid rgba(255,255,255,0.05);
+              font-size:11px;
+              font-family:'JetBrains Mono', monospace;
+            ">
+              <span style="color:#888;">
+                ${k.replaceAll('_',' ')}
+              </span>
+              <span style="color:#fff;">
+                ${displayValue}
+              </span>
+            </div>
+          `;
+        }).join('')}
 
       </div>
     `).join('')}
