@@ -2,7 +2,7 @@
 
 > *Named after Argus Panoptes — the 100-eyed giant of Greek mythology who never slept, assigned to guard something priceless.*
 
-**Visa processes 700 million transactions a day. Human fraud analysts investigate flagged cases manually, using 6 different internal tools, taking 15–30 minutes per case. Argus replicates that entire investigation workflow autonomously — pulling transaction history, checking merchant risk, validating geolocation plausibility, and detecting velocity anomalies — producing a full investigation report with verdict and confidence score in under 2.5 seconds.**
+**Visa processes 700 million transactions a day. Human fraud analysts investigate flagged cases manually, using 6 different internal tools, taking 15–30 minutes per case. Argus replicates that entire investigation workflow autonomously — pulling transaction history, checking merchant risk, validating geolocation plausibility, and detecting velocity anomalies — producing a full investigation report with **risk score (0–100), verdict, and confidence score** in under 2.5 seconds.**
 
 [![Precision](https://img.shields.io/badge/Precision-100%25-10B981?style=flat)](/)
 [![Recall](https://img.shields.io/badge/Recall-100%25-10B981?style=flat)](/)
@@ -50,6 +50,45 @@ When a suspicious transaction is flagged, Argus:
 
 Total time: **< 2.5 seconds**. Every step is traced in LangSmith.
 
+## 🧠 Fraud Scoring Engine (Deterministic Guardrail)
+
+Argus does not rely solely on LLM reasoning for final decisions.
+
+It uses a **hybrid architecture**:
+- LLM → gathers signals via tools
+- Deterministic engine → computes final verdict
+
+### How scoring works:
+
+- Each risk signal is assigned a **weight**
+- Signals are aggregated into a **risk score (0–100)**
+- Missing data (e.g., no history) is treated as **uncertainty, not risk**
+
+### Example:
+| Signal        | Weight         |
+|---------------|----------------|
+| Cross-border transaction | +25 |
+| Impossible travel        | +40 |
+| Velocity anomaly         | +35 |
+| Unknown merchant         | +10 |
+
+### Decision thresholds:
+| Score | Verdict  |
+|-------|----------|
+| 0–29  | ALLOW    |
+| 30–59 | ESCALATE |
+| 60+   | BLOCK    |
+### Key Design Principle
+
+> Absence of data ≠ fraud signal
+
+New users are handled via **cold-start logic**, preventing bias.
+
+This makes Argus:
+- Explainable
+- Deterministic
+- Production-ready
+
 ## ✨ Features
 
 - 🔍 Real-time fraud investigation (< 2.5s)
@@ -61,7 +100,9 @@ Total time: **< 2.5 seconds**. Every step is traced in LangSmith.
   - Cardholder behavioral profiling
 - ⚠️ Clear risk signal extraction (human-readable)
 - 📊 Structured investigation breakdown (per tool)
-- 🎯 Final verdict: `ALLOW` · `BLOCK` · `ESCALATE`
+- 🧮 Fraud risk scoring (0–100) with weighted signals
+- ⚖️ Separation of **risk vs uncertainty** (missing data not penalized)
+- 🧊 Cold-start aware logic for new users
 - 📈 Confidence scoring for every decision
 - 🎨 Interactive UI with:
   - Risk signals panel
@@ -153,6 +194,8 @@ Total time: **< 2.5 seconds**. Every step is traced in LangSmith.
 
 ---
 
+
+
 ## Scaling to Production
 
 Argus is designed to scale horizontally. Here's how it grows:
@@ -186,6 +229,8 @@ Key design decisions that enable scaling:
 | CI/CD | GitHub Actions | Lint → test → build on every push |
 | Code quality | ruff + pre-commit | Zero lint warnings, consistent formatting enforced at commit |
 
+**Final decision is NOT taken by the LLM.**  
+A deterministic fraud scoring layer ensures consistency and prevents hallucinated decisions.
 ---
 
 ## Project Structure
@@ -274,13 +319,19 @@ Submit a transaction for autonomous investigation.
 **Request:**
 ```json
 {
-  "transaction_id": "txn_001",
-  "card_id": "card_123",
-  "amount": 1850.00,
-  "merchant_name": "Merchant Name",
-  "merchant_country": "NG",
-  "cardholder_country": "US",
-  "timestamp": "2024-01-15T14:30:00Z"
+  "transaction_id": "txn_ZPDJ1287",
+  "card_id": "card_IN_055",
+  "amount": 89000,
+  "merchant_name": "TechLux World",
+  "merchant_id": "merch_AE_881",
+  "merchant_category": "Electronics",
+  "merchant_country": "AE",
+  "merchant_city": "Dubai",
+  "transaction_country": "AE",
+  "cardholder_country": "IN",
+  "timestamp": "2026-04-16T11:57:21.685Z",
+  "is_online": true,
+  "is_new_merchant": true
 }
 ```
 
@@ -289,6 +340,7 @@ Submit a transaction for autonomous investigation.
 {
   "recommendation": "BLOCK",
   "confidence_score": 0.90,
+  "risk_score": 72,
   "risk_level": "CRITICAL",
   "reasoning": "The transaction is flagged due to multiple high-risk factors including cross-border usage, high-risk merchant category, and high transaction amount.",
   "risk_signals": [
