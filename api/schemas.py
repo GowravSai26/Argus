@@ -210,6 +210,10 @@ class InvestigationReport(BaseModel):
         default_factory=list,
         description="All risk signals detected across all tools",
     )
+    decision_trace: list[str] = Field(
+    default_factory=list,
+    description="Step-by-step reasoning trace of agent decisions"
+)
     tool_results: dict[str, Any] = Field(
         default_factory=dict,
         description="Raw outputs from each tool, keyed by tool name",
