@@ -596,6 +596,8 @@ function renderFindings(data) {
 }
 
 async function investigate() {
+  const API_URL = "https://argus-production-7aa3.up.railway.app";
+
   const btn = document.getElementById('runBtn');
   const output = document.getElementById('output');
   const errBox = document.getElementById('errorBox');
@@ -618,7 +620,7 @@ async function investigate() {
   errBox.style.display = 'none';
 
   try {
-    const res = await fetch(API, {
+    const res = await fetch(`${API_URL}/agent-investigate`, {   // ✅ FIXED
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ transaction: payload })
@@ -628,14 +630,12 @@ async function investigate() {
 
     const data = await res.json();
 
-    // ✅ normalize response
     const result = data.report || data;
 
     const verdict = (result.recommendation || result.verdict || result.decision || 'UNKNOWN').toUpperCase();
     const confidence = result.confidence_score || result.confidence || 0;
     const report = result.reasoning || JSON.stringify(result, null, 2);
 
-    // ✅ case label fix
     document.getElementById('caseLabel').textContent =
       `Case #${payload.transaction?.transaction_id || payload.transaction_id || 'N/A'}`;
 
@@ -653,7 +653,6 @@ async function investigate() {
 
     document.getElementById('confLabel').textContent = `Confidence: ${pct}%`;
 
-    // 🔥 RISK LEVEL BADGE
     const risk = (result.risk_level || 'UNKNOWN').toUpperCase();
 
     const riskColors = {
@@ -677,7 +676,6 @@ async function investigate() {
       </span>
     `;
 
-    // ✅ UI rendering
     renderFindings(result);
     renderRiskSignals(result);
     renderToolResults(result);
