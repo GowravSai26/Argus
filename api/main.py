@@ -12,6 +12,8 @@ import time
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+import uuid
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -176,4 +178,118 @@ async def investigate(request: InvestigateRequest) -> InvestigateResponse:
             f"| error={exc}",
             exc_info=True,
         )
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    
+@app.post("/agent-investigate", response_model=InvestigateResponse)
+async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
+    from agent.agent_graph import agent_graph
+    from agent.graph import run_investigation
+    from datetime import datetime
+    import uuid
+
+    try:
+        result = await agent_graph.ainvoke({
+            "input": request.transaction.model_dump(mode="json"),
+            "messages": [],
+            "tool_results": {},
+            "decision": "",
+            "next_tool": "",
+            "final_output": {},
+            "all_risk_signals": [],
+            "decision_trace": []
+        })
+
+        logger.info(f"Agent output: {result}")
+        logger.info(f"[TRACE] {result.get('decision_trace')}")
+        logger.info(f"[TOOLS] {list(result.get('tool_results', {}).keys())}")
+
+        agent_output = result.get("final_output", {})
+
+        # 🚨 Guardrail 1: Ensure tools ran
+        if len(result.get("tool_results", {})) == 0:
+            raise HTTPException(status_code=500, detail="No tools executed")
+
+        # fallback (optional — you can remove later)
+        if not agent_output:
+            raise HTTPException(status_code=500, detail="Agent failed to produce output")
+
+        else:
+            # 🚨 Guardrail 2: Extract real signals
+            all_signals = []
+            for tool_data in result.get("tool_results", {}).values():
+                if isinstance(tool_data, dict):
+                    all_signals.extend(tool_data.get("risk_signals", []))
+
+            risk_signals = list(set(all_signals))
+
+            # 🚨 Guardrail 3: Decide recommendation
+            score = 0
+
+            for signal in risk_signals:
+                if "cross-border" in signal.lower():
+                    score += 2
+                elif "unknown merchant" in signal.lower():
+                    score += 1
+                elif "no transaction history" in signal.lower():
+                    score += 1
+                elif "no historical profile" in signal.lower():
+                    score += 1
+
+            # decision
+            if score >= 4:
+                recommendation = "BLOCK"
+            elif score >= 2:
+                recommendation = "ESCALATE"
+            else:
+                recommendation = "ALLOW"
+
+            reasoning = agent_output.get("reasoning", "")
+
+            if recommendation == "BLOCK":
+                reasoning = f"Transaction blocked due to multiple high-risk signals. {reasoning}"
+            elif recommendation == "ESCALATE":
+                reasoning = "Transaction requires manual review. " + reasoning
+            else:
+                reasoning = "Transaction appears safe. " + reasoning
+
+            # 🔍 Debug (very useful)
+
+            if recommendation == "BLOCK":
+                risk_level = "CRITICAL"
+                confidence_score = 0.9
+            elif recommendation == "ESCALATE":
+                risk_level = "MEDIUM"
+                confidence_score = 0.6
+            else:
+                risk_level = "LOW"
+                confidence_score = 0.8
+
+            logger.info(f"[Guardrail] signals={len(risk_signals)} -> recommendation={recommendation}")
+            
+            report = {
+                "investigation_id": str(uuid.uuid4()),
+                "transaction_id": request.transaction.transaction_id,
+
+                "recommendation": recommendation,
+                
+                "confidence_score": confidence_score,
+                "risk_level": risk_level,
+                "reasoning": reasoning,
+
+                "risk_signals": risk_signals,
+
+                "decision_trace": result.get("decision_trace", []),
+                "tool_results": result.get("tool_results", {}),
+
+                "investigated_at": datetime.utcnow().isoformat(),
+                "duration_ms": 0,
+                "langsmith_run_url": None
+            }
+
+        return InvestigateResponse(
+            status=InvestigationStatus.COMPLETED,
+            report=report
+        )
+
+    except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
