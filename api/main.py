@@ -183,7 +183,6 @@ async def investigate(request: InvestigateRequest) -> InvestigateResponse:
 @app.post("/agent-investigate", response_model=InvestigateResponse)
 async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
     from agent.agent_graph import agent_graph
-    from agent.graph import run_investigation
     from datetime import datetime
     import uuid
 
@@ -200,91 +199,143 @@ async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
         })
 
         logger.info(f"Agent output: {result}")
-        logger.info(f"[TRACE] {result.get('decision_trace')}")
-        logger.info(f"[TOOLS] {list(result.get('tool_results', {}).keys())}")
 
+        tool_results = result.get("tool_results", {})
         agent_output = result.get("final_output", {})
 
         # 🚨 Guardrail 1: Ensure tools ran
-        if len(result.get("tool_results", {})) == 0:
+        if not tool_results:
             raise HTTPException(status_code=500, detail="No tools executed")
 
-        # fallback (optional — you can remove later)
         if not agent_output:
             raise HTTPException(status_code=500, detail="Agent failed to produce output")
 
-        else:
-            # 🚨 Guardrail 2: Extract real signals
-            all_signals = []
-            for tool_data in result.get("tool_results", {}).values():
-                if isinstance(tool_data, dict):
-                    all_signals.extend(tool_data.get("risk_signals", []))
+        # ───────────────────────────────
+        # STEP 1: Collect signals
+        # ───────────────────────────────
+        all_signals = []
+        for tool_data in tool_results.values():
+            if isinstance(tool_data, dict):
+                all_signals.extend(tool_data.get("risk_signals", []))
 
-            risk_signals = list(set(all_signals))
+        raw_signals = list(set([s.lower().strip() for s in all_signals]))
 
-            # 🚨 Guardrail 3: Decide recommendation
-            score = 0
+        # ───────────────────────────────
+        # STEP 2: Define signal weights
+        # ───────────────────────────────
+        SIGNAL_WEIGHTS = {
+            "cross-border": 25,
+            "high risk merchant": 25,
+            "velocity": 35,
+            "impossible travel": 40,
+            "unknown merchant": 10,
+        }
 
-            for signal in risk_signals:
-                if "cross-border" in signal.lower():
-                    score += 2
-                elif "unknown merchant" in signal.lower():
-                    score += 1
-                elif "no transaction history" in signal.lower():
-                    score += 1
-                elif "no historical profile" in signal.lower():
-                    score += 1
+        MISSING_DATA = [
+            "no transaction history",
+            "no historical profile",
+        ]
 
-            # decision
-            if score >= 4:
+        # ───────────────────────────────
+        # STEP 3: Score calculation
+        # ───────────────────────────────
+        score = 0
+        used_signals = []
+
+        for signal in raw_signals:
+
+            # ❌ Ignore missing data (IMPORTANT FIX)
+            if any(m in signal for m in MISSING_DATA):
+                continue
+
+            for key, weight in SIGNAL_WEIGHTS.items():
+                if key in signal:
+                    score += weight
+                    used_signals.append(signal)
+                    break
+
+        # cap score to 100
+        score = min(score, 100)
+
+        # ───────────────────────────────
+        # STEP 4: Detect user type
+        # ───────────────────────────────
+        txn_history = tool_results.get("transaction_history", {})
+        is_new_user = txn_history.get("total_transactions_30d", 0) == 0
+
+        # ───────────────────────────────
+        # STEP 5: Decision logic
+        # ───────────────────────────────
+        if is_new_user:
+            if score >= 70:
                 recommendation = "BLOCK"
-            elif score >= 2:
+            elif score >= 40:
+                recommendation = "ESCALATE"
+            else:
+                recommendation = "ALLOW"
+        else:
+            if score >= 60:
+                recommendation = "BLOCK"
+            elif score >= 30:
                 recommendation = "ESCALATE"
             else:
                 recommendation = "ALLOW"
 
-            reasoning = agent_output.get("reasoning", "")
+        # ───────────────────────────────
+        # STEP 6: Risk level
+        # ───────────────────────────────
+        if score >= 70:
+            risk_level = "CRITICAL"
+        elif score >= 40:
+            risk_level = "HIGH"
+        elif score >= 20:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "LOW"
 
-            if recommendation == "BLOCK":
-                reasoning = f"Transaction blocked due to multiple high-risk signals. {reasoning}"
-            elif recommendation == "ESCALATE":
-                reasoning = "Transaction requires manual review. " + reasoning
-            else:
-                reasoning = "Transaction appears safe. " + reasoning
+        # ───────────────────────────────
+        # STEP 7: Confidence
+        # ───────────────────────────────
+        data_points = len(tool_results)
+        confidence_score = round(0.6 + (0.1 * min(data_points, 4)), 2)
 
-            # 🔍 Debug (very useful)
+        # ───────────────────────────────
+        # STEP 8: Reasoning
+        # ───────────────────────────────
+        base_reason = agent_output.get("reasoning", "")
 
-            if recommendation == "BLOCK":
-                risk_level = "CRITICAL"
-                confidence_score = 0.9
-            elif recommendation == "ESCALATE":
-                risk_level = "MEDIUM"
-                confidence_score = 0.6
-            else:
-                risk_level = "LOW"
-                confidence_score = 0.8
+        if recommendation == "BLOCK":
+            reasoning = f"High-risk transaction detected (score={score}). {base_reason}"
+        elif recommendation == "ESCALATE":
+            reasoning = f"Moderate risk detected (score={score}), requires review. {base_reason}"
+        else:
+            reasoning = f"Low-risk transaction (score={score}). {base_reason}"
 
-            logger.info(f"[Guardrail] signals={len(risk_signals)} -> recommendation={recommendation}")
-            
-            report = {
-                "investigation_id": str(uuid.uuid4()),
-                "transaction_id": request.transaction.transaction_id,
+        logger.info(f"[Decision] score={score} new_user={is_new_user} -> {recommendation}")
 
-                "recommendation": recommendation,
-                
-                "confidence_score": confidence_score,
-                "risk_level": risk_level,
-                "reasoning": reasoning,
+        # ───────────────────────────────
+        # FINAL RESPONSE
+        # ───────────────────────────────
+        report = {
+            "investigation_id": str(uuid.uuid4()),
+            "transaction_id": request.transaction.transaction_id,
 
-                "risk_signals": risk_signals,
+            "recommendation": recommendation,
+            "confidence_score": confidence_score,
+            "risk_level": risk_level,
+            "reasoning": reasoning,
 
-                "decision_trace": result.get("decision_trace", []),
-                "tool_results": result.get("tool_results", {}),
+            "risk_score": score,  # 🔥 NEW (0–100)
 
-                "investigated_at": datetime.utcnow().isoformat(),
-                "duration_ms": 0,
-                "langsmith_run_url": None
-            }
+            "risk_signals": used_signals,
+
+            "decision_trace": result.get("decision_trace", []),
+            "tool_results": tool_results,
+
+            "investigated_at": datetime.utcnow().isoformat(),
+            "duration_ms": 0,
+            "langsmith_run_url": None
+        }
 
         return InvestigateResponse(
             status=InvestigationStatus.COMPLETED,

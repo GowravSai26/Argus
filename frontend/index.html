@@ -291,7 +291,7 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
       <div id="findingsArea"></div>
       <div id="riskSignals" style="margin-top:15px;"></div>
       <div id="toolResults" style="margin-top:20px;"></div>
-      <div id="decisionTrace" style="margin-top:20px;"></div>
+      <!-- <div id="decisionTrace" style="margin-top:20px;"></div> -->
       <div class="report-box" id="reportBox"></div>
     </div>
   </div>
@@ -470,17 +470,15 @@ function renderDecisionTrace(result) {
     return;
   }
 
+  const clean = trace.map(t => t.replace("Selected tool: ", ""));
+
   el.innerHTML = `
-    <div class="findings-title">🧭 Agent Decision Flow</div>
-    ${trace.map((step, i) => `
-      <div class="finding">
-        <div class="finding-icon warn">${i + 1}</div>
-        <div class="finding-text">${step}</div>
-      </div>
-    `).join('')}
+    <div class="findings-title">🧭 Investigation Path</div>
+    <div style="font-family:'JetBrains Mono'; font-size:12px; color:#F59E0B;">
+      ${clean.join(' → ')}
+    </div>
   `;
 }
-
 const API = 'https://argus-production-7aa3.up.railway.app/investigate';
 
 const scenarios = {
@@ -679,7 +677,7 @@ async function investigate() {
     renderFindings(result);
     renderRiskSignals(result);
     renderToolResults(result);
-    renderDecisionTrace(result);
+    // renderDecisionTrace(result);
 
     document.getElementById('reportBox').textContent =
       typeof report === 'string' ? report : JSON.stringify(report, null, 2);
