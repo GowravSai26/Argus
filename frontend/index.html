@@ -291,6 +291,7 @@ body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
       <div id="findingsArea"></div>
       <div id="riskSignals" style="margin-top:15px;"></div>
       <div id="toolResults" style="margin-top:20px;"></div>
+      <div id="decisionTrace" style="margin-top:20px;"></div>
       <div class="report-box" id="reportBox"></div>
     </div>
   </div>
@@ -399,63 +400,87 @@ function renderToolResults(result) {
           ${name.replaceAll('_',' ').toUpperCase()}
         </div>
 
-        ${Object.entries(data).map(([k, v]) => {
-          let displayValue = '';
+        ${
+          data && typeof data === 'object'
+            ? Object.entries(data).map(([k, v]) => {
+                let displayValue = '';
 
-          // ✅ Boolean (subtle, not aggressive)
-          if (typeof v === 'boolean') {
-            displayValue = v ? 'YES' : 'NO';
-          } 
+                // ✅ Boolean
+                if (typeof v === 'boolean') {
+                  displayValue = v ? 'YES' : 'NO';
+                }
 
-          // ✅ Percent
-          else if (k.includes('percent')) {
-            displayValue = `${v}%`;
-          } 
+                // ✅ Percent
+                else if (k.includes('percent')) {
+                  displayValue = `${v}%`;
+                }
 
-          // ✅ Array (only highlight if risk_signals)
-          else if (Array.isArray(v)) {
-            if (k === 'risk_signals') {
-              displayValue = v.length
-                ? `<span style="color:#EF4444;">${v.join(', ')}</span>`
-                : `<span style="color:#10B981;">None</span>`;
-            } else {
-              displayValue = v.join(', ');
-            }
-          } 
+                // ✅ Array
+                else if (Array.isArray(v)) {
+                  if (k === 'risk_signals') {
+                    displayValue = v.length
+                      ? `<span style="color:#EF4444;">${v.join(', ')}</span>`
+                      : `<span style="color:#10B981;">None</span>`;
+                  } else {
+                    displayValue = v.join(', ');
+                  }
+                }
 
-          // ✅ Object
-          else if (typeof v === 'object' && v !== null) {
-            displayValue = JSON.stringify(v);
-          } 
+                // ✅ Object
+                else if (typeof v === 'object' && v !== null) {
+                  displayValue = JSON.stringify(v);
+                }
 
-          // ✅ Default
-          else {
-            displayValue = v;
-          }
+                // ✅ Default
+                else {
+                  displayValue = v;
+                }
 
-          return `
-            <div style="
-              display:flex;
-              justify-content:space-between;
-              padding:4px 0;
-              border-bottom:1px solid rgba(255,255,255,0.05);
-              font-size:11px;
-              font-family:'JetBrains Mono', monospace;
-            ">
-              <span style="color:#888;">
-                ${k.replaceAll('_',' ')}
-              </span>
-              <span style="color:#fff;">
-                ${displayValue}
-              </span>
-            </div>
-          `;
-        }).join('')}
+                return `
+                  <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    padding:4px 0;
+                    border-bottom:1px solid rgba(255,255,255,0.05);
+                    font-size:11px;
+                    font-family:'JetBrains Mono', monospace;
+                  ">
+                    <span style="color:#888;">
+                      ${k.replaceAll('_',' ')}
+                    </span>
+                    <span style="color:#fff;">
+                      ${displayValue}
+                    </span>
+                  </div>
+                `;
+              }).join('')
+            : ''
+        }
 
       </div>
     `).join('')}
   `;
 }
+function renderDecisionTrace(result) {
+  const el = document.getElementById('decisionTrace');
+  const trace = result.decision_trace || [];
+
+  if (!trace.length) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="findings-title">🧭 Agent Decision Flow</div>
+    ${trace.map((step, i) => `
+      <div class="finding">
+        <div class="finding-icon warn">${i + 1}</div>
+        <div class="finding-text">${step}</div>
+      </div>
+    `).join('')}
+  `;
+}
+
 const API = 'https://argus-production-7aa3.up.railway.app/investigate';
 
 const scenarios = {
@@ -656,6 +681,7 @@ async function investigate() {
     renderFindings(result);
     renderRiskSignals(result);
     renderToolResults(result);
+    renderDecisionTrace(result);
 
     document.getElementById('reportBox').textContent =
       typeof report === 'string' ? report : JSON.stringify(report, null, 2);
