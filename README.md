@@ -13,7 +13,7 @@
 
 ## 🔴 Live Demo
 
-**[argus.vercel.app](https://argus.vercel.app)** — Submit a real transaction. Watch the agent investigate it.
+**[argus.vercel.app](https://argus-seven-black.vercel.app/)** — Submit a real transaction. Watch the agent investigate it.
 
 **API:** `https://argus-production-7aa3.up.railway.app` — Live on Railway. Full Swagger docs at `/docs`.
 
