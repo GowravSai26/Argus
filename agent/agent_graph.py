@@ -94,7 +94,6 @@ async def agent_node(state: AgentState) -> dict:
     return {"next_tool": tool, "decision_trace": decision_trace}
 
 
-
 logger = logging.getLogger("argus.agent")
 
 
