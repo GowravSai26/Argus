@@ -1,11 +1,13 @@
-from typing import TypedDict, List, Dict, Any
-from langgraph.graph import StateGraph, END
+import logging
+from typing import Any, TypedDict
+
+from langgraph.graph import END, StateGraph
 
 
 class AgentState(TypedDict):
     input: dict
-    messages: List[Dict[str, Any]]
-    tool_results: Dict[str, Any]
+    messages: list[dict[str, Any]]
+    tool_results: dict[str, Any]
     decision: str
 
     next_tool: str
@@ -14,11 +16,13 @@ class AgentState(TypedDict):
     all_risk_signals: list
     decision_trace: list
 
+
 async def agent_node(state: AgentState) -> dict:
-    from langchain_groq import ChatGroq
-    import os
     import json
+    import os
     import re
+
+    from langchain_groq import ChatGroq
 
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",
@@ -74,7 +78,7 @@ async def agent_node(state: AgentState) -> dict:
                 "velocity_check",
                 "geolocation_check",
                 "profile_check",
-                "finish"
+                "finish",
             ]
 
             if tool not in allowed:
@@ -87,13 +91,12 @@ async def agent_node(state: AgentState) -> dict:
     decision_trace = state.get("decision_trace", [])
     decision_trace.append(f"Selected tool: {tool}")
 
-    return {
-        "next_tool": tool,
-        "decision_trace": decision_trace
-    }
-    
-import logging
+    return {"next_tool": tool, "decision_trace": decision_trace}
+
+
+
 logger = logging.getLogger("argus.agent")
+
 
 async def tool_executor_node(state: AgentState) -> dict:
     state.setdefault("all_risk_signals", [])
@@ -105,11 +108,11 @@ async def tool_executor_node(state: AgentState) -> dict:
     state["transaction"] = state["input"]
 
     from agent.graph import (
-        node_transaction_history,
-        node_merchant_risk,
-        node_velocity_check,
         node_geolocation_check,
+        node_merchant_risk,
         node_profile_check,
+        node_transaction_history,
+        node_velocity_check,
     )
 
     tool_map = {
@@ -147,19 +150,18 @@ async def tool_executor_node(state: AgentState) -> dict:
 
     tool_results[tool] = clean_result
 
-    return {
-        "tool_results": tool_results
-    }
+    return {"tool_results": tool_results}
 
 
 async def finish_node(state: AgentState) -> dict:
-    return {
-        "final_output": state["tool_results"]
-    }
+    return {"final_output": state["tool_results"]}
+
 
 async def synthesise_node(state: AgentState) -> dict:
+    import json
+    import os
+
     from langchain_groq import ChatGroq
-    import os, json
 
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",
@@ -193,6 +195,7 @@ Respond in JSON with:
     content = response.content
 
     import re
+
     match = re.search(r"\{.*\}", content, re.DOTALL)
 
     if not match:
@@ -201,15 +204,15 @@ Respond in JSON with:
     try:
         data = json.loads(match.group())
         return {"final_output": data}
-    except:
+    except Exception:
         return {"final_output": {}}
+
 
 def build_agent_graph():
     builder = StateGraph(AgentState)
 
     # existing agent node
     builder.add_node("agent", agent_node)
-
 
     builder.add_node("tool_executor", tool_executor_node)
     builder.add_node("finish", finish_node)
@@ -218,7 +221,6 @@ def build_agent_graph():
     # entry
     builder.set_entry_point("agent")
 
-   
     builder.add_conditional_edges(
         "agent",
         lambda state: state.get("next_tool", "finish"),
@@ -229,7 +231,7 @@ def build_agent_graph():
             "geolocation_check": "tool_executor",
             "profile_check": "tool_executor",
             "finish": "synthesise",
-        }
+        },
     )
 
     builder.add_edge("tool_executor", "agent")

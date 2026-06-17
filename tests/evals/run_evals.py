@@ -15,7 +15,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -75,11 +74,7 @@ def compute_metrics(results: list[dict]) -> dict:
 
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    f1 = (
-        2 * precision * recall / (precision + recall)
-        if (precision + recall) > 0
-        else 0.0
-    )
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
     accuracy = (tp + tn) / len(results) if results else 0.0
 
     return {
@@ -104,8 +99,8 @@ def compute_metrics(results: list[dict]) -> dict:
 
 async def run_single_case(case: dict) -> dict:
     """Run the agent on a single eval case and return the result."""
-    from api.schemas import TransactionInput
     from agent.graph import run_investigation
+    from api.schemas import TransactionInput
 
     start = time.perf_counter()
     try:
@@ -154,10 +149,10 @@ async def run_evals(cases_path: str) -> None:
     with open(cases_file) as f:
         cases = json.load(f)
 
-    print(f"\n{'='*60}")
-    print(f"  ARGUS EVALUATION HARNESS")
+    print(f"\n{'=' * 60}")
+    print("  ARGUS EVALUATION HARNESS")
     print(f"  Running {len(cases)} cases...")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     results = []
     for i, case in enumerate(cases, 1):
@@ -178,27 +173,27 @@ async def run_evals(cases_path: str) -> None:
     metrics = compute_metrics(results)
     wrong = [r for r in results if not r["correct"]]
 
-    print(f"\n{'='*60}")
-    print(f"  RESULTS")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("  RESULTS")
+    print(f"{'=' * 60}")
     print(f"  Total cases    : {metrics['total']}")
     print(f"  Correct        : {metrics['total'] - len(wrong)}")
     print(f"  Wrong          : {len(wrong)}")
-    print(f"")
+    print("")
     print(f"  Precision      : {metrics['precision']:.4f}")
     print(f"  Recall         : {metrics['recall']:.4f}")
     print(f"  F1 Score       : {metrics['f1_score']:.4f}")
     print(f"  Accuracy       : {metrics['accuracy']:.4f}")
-    print(f"")
+    print("")
     print(f"  True Positives : {metrics['true_positives']}")
     print(f"  False Positives: {metrics['false_positives']}")
     print(f"  True Negatives : {metrics['true_negatives']}")
     print(f"  False Negatives: {metrics['false_negatives']}")
 
     if wrong:
-        print(f"\n{'='*60}")
-        print(f"  MISCLASSIFIED CASES")
-        print(f"{'='*60}")
+        print(f"\n{'=' * 60}")
+        print("  MISCLASSIFIED CASES")
+        print(f"{'=' * 60}")
         for r in wrong:
             print(f"\n  [{r['id']}] {r['description']}")
             print(f"  Expected: {r['expected']} | Predicted: {r['predicted']}")
@@ -207,7 +202,7 @@ async def run_evals(cases_path: str) -> None:
             if r["error"]:
                 print(f"  Error: {r['error']}")
 
-    print(f"\n{'='*60}\n")
+    print(f"\n{'=' * 60}\n")
 
     # Exit with error code if precision or recall below threshold
     if metrics["precision"] < 0.7 or metrics["recall"] < 0.7:

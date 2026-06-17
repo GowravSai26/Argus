@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 import random
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from faker import Faker
 
@@ -25,17 +25,28 @@ rng = random.Random(42)  # seeded for reproducibility
 # ---------------------------------------------------------------------------
 
 HIGH_RISK_CATEGORIES = [
-    "Electronics", "Jewelry", "Gift Cards", "Crypto Exchange",
-    "Wire Transfer", "Gambling", "Adult Entertainment",
+    "Electronics",
+    "Jewelry",
+    "Gift Cards",
+    "Crypto Exchange",
+    "Wire Transfer",
+    "Gambling",
+    "Adult Entertainment",
 ]
 
 LOW_RISK_CATEGORIES = [
-    "Grocery", "Gas Station", "Pharmacy", "Coffee Shop",
-    "Restaurant", "Clothing", "Utilities", "Healthcare",
+    "Grocery",
+    "Gas Station",
+    "Pharmacy",
+    "Coffee Shop",
+    "Restaurant",
+    "Clothing",
+    "Utilities",
+    "Healthcare",
 ]
 
 HIGH_RISK_COUNTRIES = ["NG", "RO", "UA", "VN", "PK", "ID"]
-LOW_RISK_COUNTRIES  = ["US", "GB", "CA", "AU", "DE", "JP", "FR"]
+LOW_RISK_COUNTRIES = ["US", "GB", "CA", "AU", "DE", "JP", "FR"]
 
 ALL_COUNTRIES = HIGH_RISK_COUNTRIES + LOW_RISK_COUNTRIES
 
@@ -44,20 +55,23 @@ ALL_COUNTRIES = HIGH_RISK_COUNTRIES + LOW_RISK_COUNTRIES
 # Card and merchant pools
 # ---------------------------------------------------------------------------
 
+
 def make_card_pool(n: int = 200) -> list[dict]:
     """Generate a pool of synthetic cardholders with stable profiles."""
     cards = []
     for _ in range(n):
         home_country = rng.choice(LOW_RISK_COUNTRIES)
-        cards.append({
-            "card_id": f"card_{uuid.uuid4().hex[:8]}",
-            "home_country": home_country,
-            "typical_categories": rng.sample(LOW_RISK_CATEGORIES, k=3),
-            "typical_spend_min": rng.uniform(10, 50),
-            "typical_spend_max": rng.uniform(100, 500),
-            "account_age_days": rng.randint(30, 3650),
-            "has_previous_fraud": rng.random() < 0.05,
-        })
+        cards.append(
+            {
+                "card_id": f"card_{uuid.uuid4().hex[:8]}",
+                "home_country": home_country,
+                "typical_categories": rng.sample(LOW_RISK_CATEGORIES, k=3),
+                "typical_spend_min": rng.uniform(10, 50),
+                "typical_spend_max": rng.uniform(100, 500),
+                "account_age_days": rng.randint(30, 3650),
+                "has_previous_fraud": rng.random() < 0.05,
+            }
+        )
     return cards
 
 
@@ -66,29 +80,30 @@ def make_merchant_pool(n: int = 100) -> list[dict]:
     merchants = []
     for _ in range(n):
         is_high_risk = rng.random() < 0.2
-        category = rng.choice(
-            HIGH_RISK_CATEGORIES if is_high_risk else LOW_RISK_CATEGORIES
+        category = rng.choice(HIGH_RISK_CATEGORIES if is_high_risk else LOW_RISK_CATEGORIES)
+        country = rng.choice(HIGH_RISK_COUNTRIES if is_high_risk else LOW_RISK_COUNTRIES)
+        merchants.append(
+            {
+                "merchant_id": f"merch_{uuid.uuid4().hex[:6]}",
+                "merchant_name": fake.company(),
+                "category": category,
+                "country": country,
+                "city": fake.city(),
+                "fraud_rate": rng.uniform(0.15, 0.40) if is_high_risk else rng.uniform(0.001, 0.02),
+                "chargeback_rate": rng.uniform(0.05, 0.15)
+                if is_high_risk
+                else rng.uniform(0.001, 0.01),
+                "days_since_first_seen": rng.randint(1, 2000),
+                "is_high_risk": is_high_risk,
+            }
         )
-        country = rng.choice(
-            HIGH_RISK_COUNTRIES if is_high_risk else LOW_RISK_COUNTRIES
-        )
-        merchants.append({
-            "merchant_id": f"merch_{uuid.uuid4().hex[:6]}",
-            "merchant_name": fake.company(),
-            "category": category,
-            "country": country,
-            "city": fake.city(),
-            "fraud_rate": rng.uniform(0.15, 0.40) if is_high_risk else rng.uniform(0.001, 0.02),
-            "chargeback_rate": rng.uniform(0.05, 0.15) if is_high_risk else rng.uniform(0.001, 0.01),
-            "days_since_first_seen": rng.randint(1, 2000),
-            "is_high_risk": is_high_risk,
-        })
     return merchants
 
 
 # ---------------------------------------------------------------------------
 # Transaction generator
 # ---------------------------------------------------------------------------
+
 
 def generate_transaction(
     card: dict,
@@ -142,6 +157,7 @@ def generate_transaction(
 # SQL generation
 # ---------------------------------------------------------------------------
 
+
 def transactions_to_sql(transactions: list[dict]) -> str:
     """Convert transaction dicts to INSERT SQL statements."""
     lines = [
@@ -173,20 +189,19 @@ def transactions_to_sql(transactions: list[dict]) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def generate(n_transactions: int = 1000, fraud_rate: float = 0.08) -> list[dict]:
     """Generate n_transactions with the given fraud rate."""
     cards = make_card_pool(200)
     merchants = make_merchant_pool(100)
-    base_time = datetime.now(timezone.utc) - timedelta(days=30)
+    base_time = datetime.now(UTC) - timedelta(days=30)
 
     transactions = []
     for _ in range(n_transactions):
         card = rng.choice(cards)
         merchant = rng.choice(merchants)
         is_fraud = rng.random() < fraud_rate
-        transactions.append(
-            generate_transaction(card, merchant, is_fraud, base_time)
-        )
+        transactions.append(generate_transaction(card, merchant, is_fraud, base_time))
 
     return transactions
 
@@ -198,11 +213,15 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=str, default="data/seed.sql")
     args = parser.parse_args()
 
-    print(f"Generating {args.transactions} transactions ({args.fraud_rate*100:.0f}% fraud rate)...")
+    print(
+        f"Generating {args.transactions} transactions ({args.fraud_rate * 100:.0f}% fraud rate)..."
+    )
     txns = generate(args.transactions, args.fraud_rate)
 
     fraud_count = sum(1 for t in txns if t["is_fraud"])
-    print(f"Generated: {len(txns)} total | {fraud_count} fraud | {len(txns)-fraud_count} legitimate")
+    print(
+        f"Generated: {len(txns)} total | {fraud_count} fraud | {len(txns) - fraud_count} legitimate"
+    )
 
     sql = transactions_to_sql(txns)
     with open(args.output, "w") as f:

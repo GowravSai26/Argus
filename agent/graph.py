@@ -21,8 +21,8 @@ import time
 from typing import Any, TypedDict
 
 from langchain_groq import ChatGroq
-from langsmith import traceable
 from langgraph.graph import END, START, StateGraph
+from langsmith import traceable
 
 from api.schemas import (
     InvestigationReport,
@@ -30,7 +30,6 @@ from api.schemas import (
     RiskLevel,
     TransactionInput,
 )
-
 
 # ---------------------------------------------------------------------------
 # Agent state — passed between every node
@@ -109,8 +108,9 @@ async def node_velocity_check(state: InvestigationState) -> dict[str, Any]:
 
 async def node_geolocation_check(state: InvestigationState) -> dict[str, Any]:
     """Detect impossible travel between consecutive transactions."""
-    from agent.tools.geolocation import check_geolocation
     from datetime import datetime
+
+    from agent.tools.geolocation import check_geolocation
 
     txn = state["transaction"]
     timestamp = txn["timestamp"]
@@ -211,6 +211,7 @@ Respond with valid JSON only. No preamble, no explanation outside the JSON."""
 
     # Parse Claude's response
     import re
+
     json_match = re.search(r"\{[^{}]*\}", content, re.DOTALL)
     if not json_match:
         raise ValueError(f"Claude returned non-JSON response: {content}")

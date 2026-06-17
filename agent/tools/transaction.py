@@ -8,8 +8,7 @@ derives risk signals from spending patterns.
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import UTC, datetime, timedelta
 
 import asyncpg
 
@@ -45,7 +44,7 @@ async def get_transaction_history(
     risk_signals: list[str] = []
 
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cutoff_30d = now - timedelta(days=30)
         cutoff_24h = now - timedelta(hours=24)
         cutoff_1h = now - timedelta(hours=1)

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import asyncpg
 
@@ -40,7 +40,7 @@ async def get_cardholder_profile(
     risk_signals: list[str] = []
 
     try:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=90)
+        cutoff = datetime.now(UTC) - timedelta(days=90)
 
         rows = await conn.fetch(
             """
@@ -82,8 +82,8 @@ async def get_cardholder_profile(
         if account_row and account_row["first_seen"]:
             first_seen = account_row["first_seen"]
             if first_seen.tzinfo is None:
-                first_seen = first_seen.replace(tzinfo=timezone.utc)
-            account_age_days = (datetime.now(timezone.utc) - first_seen).days
+                first_seen = first_seen.replace(tzinfo=UTC)
+            account_age_days = (datetime.now(UTC) - first_seen).days
         else:
             account_age_days = 0
 
@@ -122,7 +122,7 @@ async def get_cardholder_profile(
         if current_amount > spend_avg * 3:
             fits_profile = False
             risk_signals.append(
-                f"Amount anomaly: ${current_amount:.2f} is {current_amount/spend_avg:.1f}x "
+                f"Amount anomaly: ${current_amount:.2f} is {current_amount / spend_avg:.1f}x "
                 f"above average spend (${spend_avg:.2f})"
             )
 
@@ -138,8 +138,7 @@ async def get_cardholder_profile(
         if current_country not in typical_countries:
             fits_profile = False
             risk_signals.append(
-                f"Unusual country: '{current_country}' not in typical "
-                f"countries {typical_countries}"
+                f"Unusual country: '{current_country}' not in typical countries {typical_countries}"
             )
 
         if has_previous_fraud:

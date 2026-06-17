@@ -8,11 +8,11 @@ Exposes two endpoints:
 
 from __future__ import annotations
 
-import time
 import logging
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+import time
 import uuid
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request
@@ -49,6 +49,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Shutdown: close connections cleanly.
     """
     import os
+
     from dotenv import load_dotenv
 
     load_dotenv()
@@ -57,8 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     missing = [v for v in required_vars if not os.getenv(v)]
     if missing:
         logger.warning(
-            f"Missing environment variables: {missing}. "
-            "Agent will not function without these."
+            f"Missing environment variables: {missing}. Agent will not function without these."
         )
 
     logger.info("Argus API starting up")
@@ -179,24 +179,25 @@ async def investigate(request: InvestigateRequest) -> InvestigateResponse:
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    
+
+
 @app.post("/agent-investigate", response_model=InvestigateResponse)
 async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
     from agent.agent_graph import agent_graph
-    from datetime import datetime
-    import uuid
 
     try:
-        result = await agent_graph.ainvoke({
-            "input": request.transaction.model_dump(mode="json"),
-            "messages": [],
-            "tool_results": {},
-            "decision": "",
-            "next_tool": "",
-            "final_output": {},
-            "all_risk_signals": [],
-            "decision_trace": []
-        })
+        result = await agent_graph.ainvoke(
+            {
+                "input": request.transaction.model_dump(mode="json"),
+                "messages": [],
+                "tool_results": {},
+                "decision": "",
+                "next_tool": "",
+                "final_output": {},
+                "all_risk_signals": [],
+                "decision_trace": [],
+            }
+        )
 
         logger.info(f"Agent output: {result}")
 
@@ -223,7 +224,7 @@ async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
         # ───────────────────────────────
         # STEP 2: Define signal weights
         # ───────────────────────────────
-        SIGNAL_WEIGHTS = {
+        signal_weights = {
             "cross-border": 25,
             "high risk merchant": 25,
             "velocity": 35,
@@ -231,7 +232,7 @@ async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
             "unknown merchant": 10,
         }
 
-        MISSING_DATA = [
+        missing_data = [
             "no transaction history",
             "no historical profile",
         ]
@@ -243,12 +244,11 @@ async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
         used_signals = []
 
         for signal in raw_signals:
-
             # ❌ Ignore missing data (IMPORTANT FIX)
-            if any(m in signal for m in MISSING_DATA):
+            if any(m in signal for m in missing_data):
                 continue
 
-            for key, weight in SIGNAL_WEIGHTS.items():
+            for key, weight in signal_weights.items():
                 if key in signal:
                     score += weight
                     used_signals.append(signal)
@@ -319,28 +319,20 @@ async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
         report = {
             "investigation_id": str(uuid.uuid4()),
             "transaction_id": request.transaction.transaction_id,
-
             "recommendation": recommendation,
             "confidence_score": confidence_score,
             "risk_level": risk_level,
             "reasoning": reasoning,
-
             "risk_score": score,  # 🔥 NEW (0–100)
-
             "risk_signals": used_signals,
-
             "decision_trace": result.get("decision_trace", []),
             "tool_results": tool_results,
-
             "investigated_at": datetime.utcnow().isoformat(),
             "duration_ms": 0,
-            "langsmith_run_url": None
+            "langsmith_run_url": None,
         }
 
-        return InvestigateResponse(
-            status=InvestigationStatus.COMPLETED,
-            report=report
-        )
+        return InvestigateResponse(status=InvestigationStatus.COMPLETED, report=report)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

@@ -8,19 +8,18 @@ Every field is typed. Every field has a description. No exceptions.
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator
-
 
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
 
-class Recommendation(str, Enum):
+class Recommendation(StrEnum):
     """Final recommendation produced by the agent."""
 
     BLOCK = "BLOCK"
@@ -28,7 +27,7 @@ class Recommendation(str, Enum):
     ESCALATE = "ESCALATE"
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     """Categorical risk level derived from confidence score."""
 
     LOW = "LOW"
@@ -37,7 +36,7 @@ class RiskLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
-class InvestigationStatus(str, Enum):
+class InvestigationStatus(StrEnum):
     """Lifecycle status of an investigation run."""
 
     PENDING = "PENDING"
@@ -60,15 +59,9 @@ class TransactionInput(BaseModel):
     transaction_id: str = Field(
         ..., description="Unique identifier for the transaction", examples=["txn_8f3a2b1c"]
     )
-    card_id: str = Field(
-        ..., description="Hashed card identifier", examples=["card_9d4e5f6a"]
-    )
-    merchant_id: str = Field(
-        ..., description="Merchant identifier", examples=["merch_2a3b4c"]
-    )
-    amount: float = Field(
-        ..., gt=0, description="Transaction amount in USD", examples=[249.99]
-    )
+    card_id: str = Field(..., description="Hashed card identifier", examples=["card_9d4e5f6a"])
+    merchant_id: str = Field(..., description="Merchant identifier", examples=["merch_2a3b4c"])
+    amount: float = Field(..., gt=0, description="Transaction amount in USD", examples=[249.99])
     merchant_category: str = Field(
         ..., description="Merchant category code description", examples=["Electronics"]
     )
@@ -81,12 +74,8 @@ class TransactionInput(BaseModel):
     cardholder_country: str = Field(
         ..., description="Country where card was issued", examples=["US"]
     )
-    timestamp: datetime = Field(
-        ..., description="UTC timestamp of the transaction"
-    )
-    is_online: bool = Field(
-        ..., description="True if card-not-present / online transaction"
-    )
+    timestamp: datetime = Field(..., description="UTC timestamp of the transaction")
+    is_online: bool = Field(..., description="True if card-not-present / online transaction")
     device_fingerprint: str | None = Field(
         default=None, description="Device fingerprint hash for online transactions"
     )
@@ -203,25 +192,20 @@ class InvestigationReport(BaseModel):
         description="Agent confidence in recommendation (0.0 = uncertain, 1.0 = certain)",
     )
     risk_level: RiskLevel
-    reasoning: str = Field(
-        ..., description="Human-readable explanation of the agent's decision"
-    )
+    reasoning: str = Field(..., description="Human-readable explanation of the agent's decision")
     risk_signals: list[str] = Field(
         default_factory=list,
         description="All risk signals detected across all tools",
     )
     decision_trace: list[str] = Field(
-    default_factory=list,
-    description="Step-by-step reasoning trace of agent decisions"
-)
+        default_factory=list, description="Step-by-step reasoning trace of agent decisions"
+    )
     tool_results: dict[str, Any] = Field(
         default_factory=dict,
         description="Raw outputs from each tool, keyed by tool name",
     )
     investigated_at: datetime = Field(default_factory=datetime.utcnow)
-    duration_ms: int = Field(
-        ..., description="Total agent wall-clock time in milliseconds"
-    )
+    duration_ms: int = Field(..., description="Total agent wall-clock time in milliseconds")
     langsmith_run_url: str | None = Field(
         default=None, description="LangSmith trace URL for this investigation"
     )

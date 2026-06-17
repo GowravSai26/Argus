@@ -8,7 +8,7 @@ where attackers make many small purchases to verify a stolen card works.
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import asyncpg
 
@@ -45,7 +45,7 @@ async def check_velocity(
     risk_signals: list[str] = []
 
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cutoff_1h = now - timedelta(hours=1)
         cutoff_24h = now - timedelta(hours=24)
 
@@ -88,18 +88,12 @@ async def check_velocity(
             )
         if amount_1h >= VELOCITY_LIMITS["max_amount_1h"]:
             velocity_exceeded = True
-            risk_signals.append(
-                f"High spend velocity: ${amount_1h:.2f} in last hour"
-            )
+            risk_signals.append(f"High spend velocity: ${amount_1h:.2f} in last hour")
         if unique_countries >= VELOCITY_LIMITS["max_unique_countries_24h"]:
             velocity_exceeded = True
-            risk_signals.append(
-                f"Multiple countries in 24h: {unique_countries} countries"
-            )
+            risk_signals.append(f"Multiple countries in 24h: {unique_countries} countries")
         if unique_merchants >= VELOCITY_LIMITS["max_unique_merchants_24h"]:
-            risk_signals.append(
-                f"Many unique merchants in 24h: {unique_merchants}"
-            )
+            risk_signals.append(f"Many unique merchants in 24h: {unique_merchants}")
 
         return VelocityResult(
             card_id=card_id,

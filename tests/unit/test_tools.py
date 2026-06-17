@@ -7,7 +7,7 @@ a live PostgreSQL instance — making them fast and CI-friendly.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -19,7 +19,6 @@ from api.schemas import (
     TransactionHistoryResult,
     VelocityResult,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -37,7 +36,7 @@ def sample_transaction() -> dict:
         "merchant_country": "NG",
         "merchant_city": "Lagos",
         "cardholder_country": "US",
-        "timestamp": datetime(2024, 1, 15, 14, 30, 0, tzinfo=timezone.utc),
+        "timestamp": datetime(2024, 1, 15, 14, 30, 0, tzinfo=UTC),
         "is_online": True,
         "is_fraud": False,
         "device_fingerprint": "abc123",
@@ -59,6 +58,7 @@ class TestTransactionHistory:
             mock_connect.return_value = mock_conn
 
             from agent.tools.transaction import get_transaction_history
+
             result = await get_transaction_history("card_new", "txn_001")
 
         assert isinstance(result, TransactionHistoryResult)
@@ -70,15 +70,27 @@ class TestTransactionHistory:
     @pytest.mark.asyncio
     async def test_high_velocity_detected(self):
         """Three or more transactions in the last hour should trigger a risk signal."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         mock_rows = [
-            {"amount": 50.0, "merchant_category": "Electronics",
-             "merchant_country": "US", "timestamp": now},
-            {"amount": 75.0, "merchant_category": "Electronics",
-             "merchant_country": "US", "timestamp": now},
-            {"amount": 60.0, "merchant_category": "Electronics",
-             "merchant_country": "US", "timestamp": now},
+            {
+                "amount": 50.0,
+                "merchant_category": "Electronics",
+                "merchant_country": "US",
+                "timestamp": now,
+            },
+            {
+                "amount": 75.0,
+                "merchant_category": "Electronics",
+                "merchant_country": "US",
+                "timestamp": now,
+            },
+            {
+                "amount": 60.0,
+                "merchant_category": "Electronics",
+                "merchant_country": "US",
+                "timestamp": now,
+            },
         ]
 
         with patch("agent.tools.transaction.asyncpg.connect") as mock_connect:
@@ -87,6 +99,7 @@ class TestTransactionHistory:
             mock_connect.return_value = mock_conn
 
             from agent.tools.transaction import get_transaction_history
+
             result = await get_transaction_history("card_001", "txn_001")
 
         assert result.transactions_in_last_1h == 3
@@ -96,11 +109,16 @@ class TestTransactionHistory:
     async def test_normal_history_no_signals(self):
         """Normal spending pattern should produce no risk signals."""
         from datetime import timedelta
-        now = datetime.now(timezone.utc)
+
+        now = datetime.now(UTC)
 
         mock_rows = [
-            {"amount": 45.0, "merchant_category": "Grocery",
-             "merchant_country": "US", "timestamp": now - timedelta(days=i)}
+            {
+                "amount": 45.0,
+                "merchant_category": "Grocery",
+                "merchant_country": "US",
+                "timestamp": now - timedelta(days=i),
+            }
             for i in range(1, 6)
         ]
 
@@ -110,6 +128,7 @@ class TestTransactionHistory:
             mock_connect.return_value = mock_conn
 
             from agent.tools.transaction import get_transaction_history
+
             result = await get_transaction_history("card_001", "txn_001")
 
         assert result.total_transactions_30d == 5
@@ -131,6 +150,7 @@ class TestMerchantRisk:
             mock_connect.return_value = mock_conn
 
             from agent.tools.merchant import get_merchant_risk
+
             result = await get_merchant_risk("merch_unknown", "Electronics", "US")
 
         assert isinstance(result, MerchantRiskResult)
@@ -157,6 +177,7 @@ class TestMerchantRisk:
             mock_connect.return_value = mock_conn
 
             from agent.tools.merchant import get_merchant_risk
+
             result = await get_merchant_risk("merch_001", "Electronics", "NG")
 
         assert result.fraud_rate_percent == 25.0
@@ -182,6 +203,7 @@ class TestMerchantRisk:
             mock_connect.return_value = mock_conn
 
             from agent.tools.merchant import get_merchant_risk
+
             result = await get_merchant_risk("merch_002", "Grocery", "US")
 
         assert result.risk_signals == []
@@ -197,11 +219,16 @@ class TestVelocity:
     async def test_velocity_exceeded_signals(self):
         """Exceeding velocity thresholds should set velocity_exceeded=True."""
         from datetime import timedelta
-        now = datetime.now(timezone.utc)
+
+        now = datetime.now(UTC)
 
         mock_rows = [
-            {"amount": 200.0, "merchant_id": f"m{i}",
-             "merchant_country": "US", "timestamp": now - timedelta(minutes=i*5)}
+            {
+                "amount": 200.0,
+                "merchant_id": f"m{i}",
+                "merchant_country": "US",
+                "timestamp": now - timedelta(minutes=i * 5),
+            }
             for i in range(5)
         ]
 
@@ -211,6 +238,7 @@ class TestVelocity:
             mock_connect.return_value = mock_conn
 
             from agent.tools.velocity import check_velocity
+
             result = await check_velocity("card_001", "txn_001")
 
         assert isinstance(result, VelocityResult)
@@ -225,6 +253,7 @@ class TestVelocity:
             mock_connect.return_value = mock_conn
 
             from agent.tools.velocity import check_velocity
+
             result = await check_velocity("card_001", "txn_001")
 
         assert result.velocity_exceeded is False
@@ -242,7 +271,8 @@ class TestGeolocation:
     async def test_impossible_travel_detected(self):
         """US → NG in 30 minutes should be flagged as impossible travel."""
         from datetime import timedelta
-        now = datetime.now(timezone.utc)
+
+        now = datetime.now(UTC)
         last_txn_time = now - timedelta(minutes=30)
 
         mock_row = {"merchant_country": "US", "timestamp": last_txn_time}
@@ -253,6 +283,7 @@ class TestGeolocation:
             mock_connect.return_value = mock_conn
 
             from agent.tools.geolocation import check_geolocation
+
             result = await check_geolocation(
                 card_id="card_001",
                 current_transaction_id="txn_001",
@@ -269,7 +300,8 @@ class TestGeolocation:
     async def test_same_country_no_travel_signal(self):
         """Transaction in same country as last transaction should not flag travel."""
         from datetime import timedelta
-        now = datetime.now(timezone.utc)
+
+        now = datetime.now(UTC)
         last_txn_time = now - timedelta(hours=2)
 
         mock_row = {"merchant_country": "US", "timestamp": last_txn_time}
@@ -280,6 +312,7 @@ class TestGeolocation:
             mock_connect.return_value = mock_conn
 
             from agent.tools.geolocation import check_geolocation
+
             result = await check_geolocation(
                 card_id="card_001",
                 current_transaction_id="txn_001",
@@ -302,12 +335,17 @@ class TestCardholderProfile:
     async def test_amount_anomaly_detected(self):
         """Amount 3x above average should be flagged."""
         from datetime import timedelta
-        now = datetime.now(timezone.utc)
+
+        now = datetime.now(UTC)
 
         mock_rows = [
-            {"amount": 50.0, "merchant_category": "Grocery",
-             "merchant_country": "US", "is_fraud": False,
-             "created_at": now - timedelta(days=i)}
+            {
+                "amount": 50.0,
+                "merchant_category": "Grocery",
+                "merchant_country": "US",
+                "is_fraud": False,
+                "created_at": now - timedelta(days=i),
+            }
             for i in range(1, 11)
         ]
         mock_fraud_rows = [{"fraud_count": 0}]
@@ -320,6 +358,7 @@ class TestCardholderProfile:
             mock_connect.return_value = mock_conn
 
             from agent.tools.profile import get_cardholder_profile
+
             result = await get_cardholder_profile(
                 card_id="card_001",
                 current_transaction_id="txn_001",
@@ -336,12 +375,17 @@ class TestCardholderProfile:
     async def test_normal_transaction_fits_profile(self):
         """Transaction matching profile should be marked as fitting."""
         from datetime import timedelta
-        now = datetime.now(timezone.utc)
+
+        now = datetime.now(UTC)
 
         mock_rows = [
-            {"amount": 50.0, "merchant_category": "Grocery",
-             "merchant_country": "US", "is_fraud": False,
-             "created_at": now - timedelta(days=i)}
+            {
+                "amount": 50.0,
+                "merchant_category": "Grocery",
+                "merchant_country": "US",
+                "is_fraud": False,
+                "created_at": now - timedelta(days=i),
+            }
             for i in range(1, 11)
         ]
         mock_fraud_rows = [{"fraud_count": 0}]
@@ -354,6 +398,7 @@ class TestCardholderProfile:
             mock_connect.return_value = mock_conn
 
             from agent.tools.profile import get_cardholder_profile
+
             result = await get_cardholder_profile(
                 card_id="card_001",
                 current_transaction_id="txn_001",
@@ -375,6 +420,7 @@ class TestSchemas:
     def test_transaction_input_validates_country_code(self):
         """Invalid country codes should raise ValidationError."""
         from pydantic import ValidationError
+
         from api.schemas import TransactionInput
 
         with pytest.raises(ValidationError):
@@ -387,13 +433,14 @@ class TestSchemas:
                 merchant_country="USA",  # invalid — must be 2 chars
                 merchant_city="NYC",
                 cardholder_country="US",
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 is_online=False,
             )
 
     def test_transaction_input_rejects_negative_amount(self):
         """Negative amounts should raise ValidationError."""
         from pydantic import ValidationError
+
         from api.schemas import TransactionInput
 
         with pytest.raises(ValidationError):
@@ -406,6 +453,6 @@ class TestSchemas:
                 merchant_country="US",
                 merchant_city="NYC",
                 cardholder_country="US",
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 is_online=False,
             )

@@ -8,7 +8,7 @@ and is now being used in London, that is physically impossible.
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from math import asin, cos, radians, sin, sqrt
 
 import asyncpg
@@ -17,12 +17,24 @@ from api.schemas import GeolocationResult
 
 # Approximate country centroids (lat, lon) for distance calculation
 COUNTRY_COORDS: dict[str, tuple[float, float]] = {
-    "US": (37.09, -95.71), "GB": (55.37, -3.43), "CA": (56.13, -106.34),
-    "AU": (-25.27, 133.77), "DE": (51.16, 10.45), "JP": (36.20, 138.25),
-    "FR": (46.22, 2.21),   "NG": (9.08, 8.67),   "RO": (45.94, 24.96),
-    "UA": (48.37, 31.16),  "VN": (14.05, 108.27), "PK": (30.37, 69.34),
-    "ID": (-0.78, 113.92), "CN": (35.86, 104.19), "IN": (20.59, 78.96),
-    "BR": (-14.23, -51.92), "MX": (23.63, -102.55), "ZA": (-30.55, 22.93),
+    "US": (37.09, -95.71),
+    "GB": (55.37, -3.43),
+    "CA": (56.13, -106.34),
+    "AU": (-25.27, 133.77),
+    "DE": (51.16, 10.45),
+    "JP": (36.20, 138.25),
+    "FR": (46.22, 2.21),
+    "NG": (9.08, 8.67),
+    "RO": (45.94, 24.96),
+    "UA": (48.37, 31.16),
+    "VN": (14.05, 108.27),
+    "PK": (30.37, 69.34),
+    "ID": (-0.78, 113.92),
+    "CN": (35.86, 104.19),
+    "IN": (20.59, 78.96),
+    "BR": (-14.23, -51.92),
+    "MX": (23.63, -102.55),
+    "ZA": (-30.55, 22.93),
 }
 
 # Average commercial flight speed km/h — used for impossibility check
@@ -103,11 +115,9 @@ async def check_geolocation(
         last_timestamp = row["timestamp"]
 
         if last_timestamp.tzinfo is None:
-            last_timestamp = last_timestamp.replace(tzinfo=timezone.utc)
+            last_timestamp = last_timestamp.replace(tzinfo=UTC)
 
-        hours_elapsed = (
-            transaction_timestamp - last_timestamp
-        ).total_seconds() / 3600
+        hours_elapsed = (transaction_timestamp - last_timestamp).total_seconds() / 3600
 
         # Calculate distance if we have coordinates for both countries
         distance_km: float | None = None

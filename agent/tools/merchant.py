@@ -13,8 +13,13 @@ import asyncpg
 from api.schemas import MerchantRiskResult
 
 HIGH_RISK_CATEGORIES = {
-    "Electronics", "Jewelry", "Gift Cards", "Crypto Exchange",
-    "Wire Transfer", "Gambling", "Adult Entertainment",
+    "Electronics",
+    "Jewelry",
+    "Gift Cards",
+    "Crypto Exchange",
+    "Wire Transfer",
+    "Gambling",
+    "Adult Entertainment",
 }
 
 
