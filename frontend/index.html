@@ -1252,12 +1252,25 @@ const scenarios={
     previous_transaction_time:new Date(Date.now()-50*60*1000).toISOString()
   },
   card_testing:{
-    transaction_id:"txn_"+rnd(),card_id:"card_IN_007",amount:1.00,
-    merchant_name:"PayCheck Micro",merchant_id:"merch_IN_009",
-    merchant_category:"Online Services",merchant_country:"IN",merchant_city:"Bangalore",
-    transaction_country:"IN",cardholder_country:"IN",
-    timestamp:new Date().toISOString(),is_online:true,
-    recent_transaction_count:5,recent_transaction_window_minutes:20
+    transaction_id:"txn_"+rnd(),
+    card_id:"card_US_001",
+    amount:1.99,
+
+    merchant_name:"Micro Charge Store",
+    merchant_id:"merchant_testing_001",
+
+    merchant_category:"Electronics",
+    merchant_country:"US",
+    merchant_city:"Austin",
+
+    transaction_country:"US",
+    cardholder_country:"US",
+
+    timestamp:new Date().toISOString(),
+    is_online:true,
+
+    recent_transaction_count:5,
+    recent_transaction_window_minutes:20
   },
   normal_purchase:{
     transaction_id:"txn_"+rnd(),card_id:"card_IN_022",amount:450.00,
