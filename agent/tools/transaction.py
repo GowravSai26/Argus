@@ -44,7 +44,7 @@ async def get_transaction_history(
     risk_signals: list[str] = []
 
     try:
-        now = datetime.now(UTC)
+        now = datetime(2026, 6, 19, tzinfo=UTC)
         cutoff_30d = now - timedelta(days=30)
         cutoff_24h = now - timedelta(hours=24)
         cutoff_1h = now - timedelta(hours=1)

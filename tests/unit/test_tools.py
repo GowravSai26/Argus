@@ -70,7 +70,7 @@ class TestTransactionHistory:
     @pytest.mark.asyncio
     async def test_high_velocity_detected(self):
         """Three or more transactions in the last hour should trigger a risk signal."""
-        now = datetime.now(UTC)
+        now = datetime(2026, 6, 19, tzinfo=UTC)
 
         mock_rows = [
             {
@@ -110,7 +110,7 @@ class TestTransactionHistory:
         """Normal spending pattern should produce no risk signals."""
         from datetime import timedelta
 
-        now = datetime.now(UTC)
+        now = datetime(2026, 6, 19, tzinfo=UTC)
 
         mock_rows = [
             {
@@ -220,7 +220,7 @@ class TestVelocity:
         """Exceeding velocity thresholds should set velocity_exceeded=True."""
         from datetime import timedelta
 
-        now = datetime.now(UTC)
+        now = datetime(2026, 6, 19, tzinfo=UTC)
 
         mock_rows = [
             {
@@ -272,7 +272,7 @@ class TestGeolocation:
         """US → NG in 30 minutes should be flagged as impossible travel."""
         from datetime import timedelta
 
-        now = datetime.now(UTC)
+        now = datetime(2026, 6, 19, tzinfo=UTC)
         last_txn_time = now - timedelta(minutes=30)
 
         mock_row = {"merchant_country": "US", "timestamp": last_txn_time}
@@ -301,7 +301,7 @@ class TestGeolocation:
         """Transaction in same country as last transaction should not flag travel."""
         from datetime import timedelta
 
-        now = datetime.now(UTC)
+        now = datetime(2026, 6, 19, tzinfo=UTC)
         last_txn_time = now - timedelta(hours=2)
 
         mock_row = {"merchant_country": "US", "timestamp": last_txn_time}
@@ -336,7 +336,7 @@ class TestCardholderProfile:
         """Amount 3x above average should be flagged."""
         from datetime import timedelta
 
-        now = datetime.now(UTC)
+        now = datetime(2026, 6, 19, tzinfo=UTC)
 
         mock_rows = [
             {
@@ -376,7 +376,7 @@ class TestCardholderProfile:
         """Transaction matching profile should be marked as fitting."""
         from datetime import timedelta
 
-        now = datetime.now(UTC)
+        now = datetime(2026, 6, 19, tzinfo=UTC)
 
         mock_rows = [
             {

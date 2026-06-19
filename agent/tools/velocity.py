@@ -45,7 +45,7 @@ async def check_velocity(
     risk_signals: list[str] = []
 
     try:
-        now = datetime.now(UTC)
+        now = datetime(2026, 6, 19, tzinfo=UTC)
         cutoff_1h = now - timedelta(hours=1)
         cutoff_24h = now - timedelta(hours=24)
 

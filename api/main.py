@@ -226,10 +226,17 @@ async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
         # ───────────────────────────────
         signal_weights = {
             "cross-border": 25,
-            "high risk merchant": 25,
+            "high-risk": 25,
             "velocity": 35,
             "impossible travel": 40,
             "unknown merchant": 10,
+            "amount anomaly": 25,
+            "unusual category": 15,
+            "unusual country": 20,
+            "new account": 15,
+            "high chargeback": 15,
+            "high daily volume": 25,
+            "rapid country change": 20,
         }
 
         missing_data = [
@@ -267,9 +274,9 @@ async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
         # STEP 5: Decision logic
         # ───────────────────────────────
         if is_new_user:
-            if score >= 70:
+            if score >= 60:
                 recommendation = "BLOCK"
-            elif score >= 40:
+            elif score >= 30:
                 recommendation = "ESCALATE"
             else:
                 recommendation = "ALLOW"
@@ -311,6 +318,8 @@ async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
         else:
             reasoning = f"Low-risk transaction (score={score}). {base_reason}"
 
+        logger.info(f"RAW SIGNALS = {raw_signals}")
+        logger.info(f"USED SIGNALS = {used_signals}")
         logger.info(f"[Decision] score={score} new_user={is_new_user} -> {recommendation}")
 
         # ───────────────────────────────

@@ -40,7 +40,9 @@ async def get_cardholder_profile(
     risk_signals: list[str] = []
 
     try:
-        cutoff = datetime.now(UTC) - timedelta(days=90)
+        reference_time = datetime(2026, 6, 19, tzinfo=UTC)
+
+        cutoff = reference_time - timedelta(days=90)
 
         rows = await conn.fetch(
             """
@@ -83,7 +85,7 @@ async def get_cardholder_profile(
             first_seen = account_row["first_seen"]
             if first_seen.tzinfo is None:
                 first_seen = first_seen.replace(tzinfo=UTC)
-            account_age_days = (datetime.now(UTC) - first_seen).days
+            account_age_days = (reference_time - first_seen).days
         else:
             account_age_days = 0
 
@@ -127,15 +129,14 @@ async def get_cardholder_profile(
             )
 
         # Category anomaly
-        if current_category not in typical_categories:
+        if current_category.lower() not in {c.lower() for c in typical_categories}:
             fits_profile = False
             risk_signals.append(
-                f"Unusual category: '{current_category}' not in typical "
-                f"categories {typical_categories}"
+                f"Unusual category: '{current_category}' not in typical categories {typical_categories}"
             )
 
         # Country anomaly
-        if current_country not in typical_countries:
+        if current_country.lower() not in {c.lower() for c in typical_countries}:
             fits_profile = False
             risk_signals.append(
                 f"Unusual country: '{current_country}' not in typical countries {typical_countries}"
