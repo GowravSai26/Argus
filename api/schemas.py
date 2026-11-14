@@ -193,6 +193,12 @@ class InvestigationReport(BaseModel):
         description="Agent confidence in recommendation (0.0 = uncertain, 1.0 = certain)",
     )
     risk_level: RiskLevel
+    risk_score: int | None = Field(
+        default=None,
+        ge=0,
+        le=100,
+        description="Weighted fraud risk score from the scoring engine (0-100)",
+    )
     reasoning: str = Field(..., description="Human-readable explanation of the agent's decision")
     risk_signals: list[str] = Field(
         default_factory=list,
