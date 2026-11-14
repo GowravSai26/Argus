@@ -3,6 +3,15 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
+# Investigation tools the agent can pick from, in the default order.
+ALL_TOOLS = [
+    "transaction_history",
+    "merchant_risk",
+    "velocity_check",
+    "geolocation_check",
+    "profile_check",
+]
+
 
 class AgentState(TypedDict):
     input: dict
@@ -71,21 +80,16 @@ async def agent_node(state: AgentState) -> dict:
         try:
             data = json.loads(match.group())
             tool = data.get("next_tool", "transaction_history")
-
-            allowed = [
-                "transaction_history",
-                "merchant_risk",
-                "velocity_check",
-                "geolocation_check",
-                "profile_check",
-                "finish",
-            ]
-
-            if tool not in allowed:
-                tool = "transaction_history"
-
         except Exception:
             tool = "transaction_history"
+
+    # Guarantee the loop ends: the prompt asks the model not to repeat tools,
+    # but if it does (or replies with something unusable) take the next tool
+    # that hasn't run yet, and finish once every tool has run.
+    done = state.get("tool_results", {})
+    remaining = [t for t in ALL_TOOLS if t not in done]
+    if tool != "finish" and (tool not in ALL_TOOLS or tool in done):
+        tool = remaining[0] if remaining else "finish"
 
     # ✅ ADD DECISION TRACE HERE (after tool is finalized)
     decision_trace = state.get("decision_trace", [])

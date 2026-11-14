@@ -157,6 +157,7 @@ argus/
 ├── frontend/index.html        # Demo UI
 ├── tests/
 │   ├── unit/test_tools.py     # Tools tested with a mocked database
+│   ├── unit/test_agent_graph.py # The tool-picking loop always ends
 │   └── evals/                 # 10 labelled scenarios + runner
 ├── Dockerfile
 ├── docker-compose.yml
