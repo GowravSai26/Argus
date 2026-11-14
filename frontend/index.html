@@ -955,7 +955,7 @@ footer{
       </div>
       <div class="hero-meta">
         <p class="hero-desc">
-          Argus is a LangGraph-powered AI agent that autonomously investigates transactions, invokes specialized tools, and delivers a verdict with full justification — in under 2.5 seconds.
+          Argus is a LangGraph-powered AI agent that autonomously investigates transactions, invokes specialized tools, and delivers a verdict with full justification — typically in about 10 seconds.
         </p>
         <a class="hero-cta" href="#demo">
           Run a Live Investigation
@@ -1118,7 +1118,7 @@ footer{
       <div class="section-title">How Argus<br>investigates</div>
     </div>
     <div class="section-desc">
-      A fully autonomous pipeline. No human in the loop. From raw transaction data to a justified verdict — in seconds.
+      An autonomous pipeline from raw transaction data to a justified verdict. Clear cases are decided automatically; borderline ones are escalated to a human analyst.
     </div>
   </div>
   <div class="how-steps">
@@ -1136,14 +1136,14 @@ footer{
     </div>
     <div class="how-step">
       <div class="step-num">03</div>
-      <div class="step-title">Reasoning Chain</div>
-      <div class="step-body">The LLM synthesizes all signals from tool outputs, constructing an evidence-based case for each finding with explicit confidence scoring.</div>
+      <div class="step-title">Risk Scoring</div>
+      <div class="step-body">A deterministic scoring engine weighs the risk signals from every tool into a 0–100 risk score. The LLM explains the result, but the verdict comes from the score, so it is repeatable and auditable.</div>
       <div class="step-connector">→</div>
     </div>
     <div class="how-step">
       <div class="step-num">04</div>
       <div class="step-title">Verdict Delivered</div>
-      <div class="step-body">BLOCK · ALLOW · ESCALATE — with full reasoning and confidence score, delivered in under 2.5 seconds via the REST API.</div>
+      <div class="step-body">BLOCK · ALLOW · ESCALATE — with the risk score and full reasoning, typically in about 10 seconds via the REST API.</div>
     </div>
   </div>
 </section>
@@ -1190,7 +1190,7 @@ footer{
       <div class="tech-item"><div class="tech-name">Groq · GPT-OSS 120B</div><div class="tech-role">LLM reasoning</div></div>
       <div class="tech-item"><div class="tech-name">FastAPI</div><div class="tech-role">REST interface</div></div>
       <div class="tech-item"><div class="tech-name">PostgreSQL</div><div class="tech-role">Transaction store</div></div>
-      <div class="tech-item"><div class="tech-name">LangSmith</div><div class="tech-role">Trace observability</div></div>
+      <div class="tech-item"><div class="tech-name">LangSmith</div><div class="tech-role">Optional tracing (/investigate)</div></div>
       <div class="tech-item"><div class="tech-name">Docker</div><div class="tech-role">Containerization</div></div>
       <div class="tech-item"><div class="tech-name">Render + Neon</div><div class="tech-role">Hosting + Postgres</div></div>
       <div class="tech-item"><div class="tech-name">Pydantic v2</div><div class="tech-role">Schema validation</div></div>

@@ -3,7 +3,7 @@ Argus Fraud Investigation Agent — FastAPI application.
 
 Exposes two endpoints:
   POST /investigate  — triggers the agent on a flagged transaction
-  GET  /health       — liveness check for Railway / load balancers
+  GET  /health       — liveness check for Render / load balancers
 """
 
 from __future__ import annotations
@@ -138,7 +138,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 async def health() -> HealthResponse:
     """
     Liveness endpoint.
-    Railway and any load balancer will ping this to confirm the service is up.
+    Render and any load balancer will ping this to confirm the service is up.
     """
     return HealthResponse()
 
@@ -280,22 +280,15 @@ async def agent_investigate(request: InvestigateRequest) -> InvestigateResponse:
         is_new_user = txn_history.get("total_transactions_30d", 0) == 0
 
         # ───────────────────────────────
-        # STEP 5: Decision logic
+        # STEP 5: Decision logic (same thresholds for new and existing
+        # cards: missing history is skipped above, not scored as risk)
         # ───────────────────────────────
-        if is_new_user:
-            if score >= 60:
-                recommendation = "BLOCK"
-            elif score >= 30:
-                recommendation = "ESCALATE"
-            else:
-                recommendation = "ALLOW"
+        if score >= 60:
+            recommendation = "BLOCK"
+        elif score >= 30:
+            recommendation = "ESCALATE"
         else:
-            if score >= 60:
-                recommendation = "BLOCK"
-            elif score >= 30:
-                recommendation = "ESCALATE"
-            else:
-                recommendation = "ALLOW"
+            recommendation = "ALLOW"
 
         # ───────────────────────────────
         # STEP 6: Risk level
