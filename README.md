@@ -8,6 +8,7 @@ The one design decision that matters most: **the LLM gathers evidence, but it do
 
 [![Live demo](https://img.shields.io/badge/Live_demo-Vercel-000?style=flat)](https://argus-seven-black.vercel.app/)
 [![API](https://img.shields.io/badge/API-Render-46E3B7?style=flat)](https://argus-api-08ws.onrender.com/docs)
+[![CI](https://github.com/GowravSai26/Argus/actions/workflows/ci.yml/badge.svg)](https://github.com/GowravSai26/Argus/actions/workflows/ci.yml)
 
 ---
 
@@ -15,7 +16,7 @@ The one design decision that matters most: **the LLM gathers evidence, but it do
 
 **[argus-seven-black.vercel.app](https://argus-seven-black.vercel.app/)** — pick a scenario or edit the transaction JSON and watch the agent investigate it.
 
-> The API runs on Render's free tier, which sleeps when nobody uses it. The page wakes it up as soon as it opens; the first investigation can take up to a minute. After that, responses come back in a few seconds.
+> The API runs on Render's free tier, which sleeps when nobody uses it. The page wakes it up as soon as it opens; the first investigation can take up to a minute. After that, an investigation typically takes about 10 seconds (the agent makes six LLM calls, and Groq's free tier rate-limits them).
 
 Interactive API docs: **[argus-api-08ws.onrender.com/docs](https://argus-api-08ws.onrender.com/docs)**
 
@@ -46,8 +47,12 @@ Interactive API docs: **[argus-api-08ws.onrender.com/docs](https://argus-api-08w
 | Cross-border transaction | +25 |
 | High-risk merchant / category | +25 |
 | Amount anomaly | +25 |
+| High daily volume | +25 |
 | Unusual country | +20 |
+| Rapid country change | +20 |
+| Unusual category | +15 |
 | New account | +15 |
+| High chargeback rate | +15 |
 | Unknown merchant | +10 |
 
 The score is capped at 100.
@@ -66,29 +71,31 @@ Why not let the LLM decide? LLM verdicts can change between runs and are hard to
 
 ## Evaluation
 
-`tests/evals/run_evals.py` runs 10 hand-labelled scenarios against the live agent:
+`tests/evals/run_evals.py` sends 10 hand-labelled cases (`tests/evals/cases.json`) to a running API's `POST /agent-investigate` — the same agent + scoring engine the demo uses. Latest run, against the **live API** on 2026-11-14:
 
-| Case | Scenario | Expected |
-|---|---|---|
-| eval_001 | US card used in Nigeria 30 min after a US purchase | BLOCK |
-| eval_002 | Normal grocery purchase in home country | ALLOW |
-| eval_003 | High-value electronics at a new merchant abroad | BLOCK |
-| eval_004 | Coffee shop, cardholder known to travel | ALLOW |
-| eval_005 | Card testing — 5 micro-transactions in 20 minutes | BLOCK |
-| eval_006 | Ambiguous cross-border, plausible timing | ESCALATE |
-| eval_007 | Crypto exchange, large amount | BLOCK |
-| eval_008 | Pharmacy, low amount, home country | ALLOW |
-| eval_009 | Wire transfer at an odd hour from abroad | BLOCK |
-| eval_010 | Recurring utilities bill | ALLOW |
+| Case | Scenario | Expected | Got |
+|---|---|---|---|
+| eval_001 | US card used in Nigeria 30 min after a US purchase | BLOCK | ✅ BLOCK |
+| eval_002 | Normal grocery purchase in home country | ALLOW | ✅ ALLOW |
+| eval_003 | High-value electronics at a new merchant abroad | BLOCK | ✅ BLOCK |
+| eval_004 | Coffee shop, cardholder known to travel | ALLOW | ✅ ALLOW |
+| eval_005 | Card testing — 5 micro-transactions in 20 minutes | BLOCK | ❌ ESCALATE (score 35) |
+| eval_006 | Ambiguous cross-border, plausible timing | ESCALATE | ✅ ESCALATE |
+| eval_007 | Crypto exchange, large amount | BLOCK | ❌ ESCALATE (score 35) |
+| eval_008 | Pharmacy, low amount, home country | ALLOW | ✅ ALLOW |
+| eval_009 | Wire transfer at an odd hour from abroad | BLOCK | ✅ BLOCK |
+| eval_010 | Recurring utilities bill | ALLOW | ✅ ALLOW |
 
-The current version gets all 10 right.
+**8/10 correct.** No legitimate transaction was blocked (precision 1.0); two fraud cases were escalated to a human instead of blocked (recall 0.6). Each case took 7–16 s on the free tier.
 
 **Limitations, stated plainly:**
-- These are 10 scenarios I wrote myself, against synthetic data from `data/generate.py`. They show the pipeline behaves as designed; they are **not** a measure of real-world fraud detection accuracy.
+- **The eval cases' cards and merchants are not in the seed database.** Every case therefore runs with no transaction history and an unknown merchant, so velocity, impossible-travel and profile checks never fire — the verdicts come only from category, country and amount signals. That is why the card-testing case (eval_005) misses, and why eval_001 is "right" without actually detecting impossible travel. Adding matching history to `data/seed.sql` is the next step.
+- These are 10 scenarios I wrote myself, on synthetic data from `data/generate.py`. They show the pipeline behaves as designed; they are **not** a measure of real-world fraud detection accuracy.
 - `confidence_score` currently reflects how many tools returned data, not a calibrated probability.
 - Signals are matched to weights by keyword, so a reworded signal from a tool would not be scored.
+- The API has no authentication or rate limiting, and allows any origin (CORS `*`).
 
-Next steps: evaluate on a public labelled dataset (e.g. the Kaggle credit-card fraud set), calibrate confidence, and replace keyword matching with typed signal codes.
+Next steps: seed history for the eval cards, evaluate on a public labelled dataset (e.g. the Kaggle credit-card fraud set), calibrate confidence, and replace keyword matching with typed signal codes.
 
 ---
 
@@ -134,7 +141,7 @@ There are two endpoints:
 | Frontend | Single static HTML page on Vercel |
 | Hosting | Render (API, free tier) + Neon (Postgres, free tier) |
 | Containers | Docker, docker-compose |
-| CI | GitHub Actions — ruff lint + unit tests |
+| CI | GitHub Actions — ruff lint, unit tests, Docker build |
 
 ---
 
@@ -158,7 +165,7 @@ argus/
 ├── tests/
 │   ├── unit/test_tools.py     # Tools tested with a mocked database
 │   ├── unit/test_agent_graph.py # The tool-picking loop always ends
-│   └── evals/                 # 10 labelled scenarios + runner
+│   └── evals/                 # 10 labelled cases + runner (calls the API)
 ├── Dockerfile
 ├── docker-compose.yml
 └── render.yaml                # Render deploy blueprint
@@ -196,7 +203,12 @@ curl -X POST http://localhost:8000/agent-investigate \
       }}'
 ```
 
-Run the evals: `docker exec -w /app argus-api-1 python tests/evals/run_evals.py`
+Run the evals against the local API, or the live one:
+
+```bash
+python tests/evals/run_evals.py
+python tests/evals/run_evals.py --api https://argus-api-08ws.onrender.com --pause 15
+```
 
 ## Deploy for free (Render + Neon)
 

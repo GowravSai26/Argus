@@ -150,9 +150,9 @@ async def node_profile_check(state: InvestigationState) -> dict[str, Any]:
 
 async def node_synthesise(state: InvestigationState) -> dict[str, Any]:
     """
-    Call Claude to synthesise all evidence into a final verdict.
+    Ask the LLM to synthesise all evidence into a final verdict.
 
-    Claude receives all tool outputs and risk signals, then produces:
+    The LLM receives all tool outputs and risk signals, then produces:
     - A recommendation (BLOCK / ALLOW / ESCALATE)
     - A confidence score (0.0 – 1.0)
     - A human-readable reasoning paragraph
@@ -209,12 +209,12 @@ Respond with valid JSON only. No preamble, no explanation outside the JSON."""
     response = await llm.ainvoke(prompt)
     content = response.content
 
-    # Parse Claude's response
+    # Parse the LLM's response
     import re
 
     json_match = re.search(r"\{[^{}]*\}", content, re.DOTALL)
     if not json_match:
-        raise ValueError(f"Claude returned non-JSON response: {content}")
+        raise ValueError(f"LLM returned non-JSON response: {content}")
 
     verdict = json.loads(json_match.group())
 
