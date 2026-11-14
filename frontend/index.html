@@ -1250,15 +1250,18 @@ function toggleTheme(){
 })();
 
 /* ── SCENARIOS ── */
+// The demo database describes the world as of 19 June 2026, and the agent's
+// checks look back from each transaction's timestamp, so scenarios use that clock.
+const DEMO_NOW=Date.parse('2026-06-19T10:30:00Z');
 const scenarios={
   impossible_travel:{
     transaction_id:"txn_"+rnd(),card_id:"card_US_001",amount:1850.00,
     merchant_name:"Lagos Electronics Hub",merchant_id:"merch_NG_441",
     merchant_category:"Electronics",merchant_country:"NG",merchant_city:"Lagos",
     transaction_country:"NG",cardholder_country:"US",
-    timestamp:new Date(Date.now()-30*60*1000).toISOString(),is_online:false,
+    timestamp:new Date(DEMO_NOW-30*60*1000).toISOString(),is_online:false,
     previous_transaction_country:"US",
-    previous_transaction_time:new Date(Date.now()-50*60*1000).toISOString()
+    previous_transaction_time:new Date(DEMO_NOW-50*60*1000).toISOString()
   },
   card_testing:{
     transaction_id:"txn_"+rnd(),
@@ -1275,7 +1278,7 @@ const scenarios={
     transaction_country:"US",
     cardholder_country:"US",
 
-    timestamp:new Date().toISOString(),
+    timestamp:new Date(DEMO_NOW).toISOString(),
     is_online:true,
 
     recent_transaction_count:5,
@@ -1286,23 +1289,23 @@ const scenarios={
     merchant_name:"Reliance Fresh",merchant_id:"merch_IN_102",
     merchant_category:"Grocery",merchant_country:"IN",merchant_city:"Hyderabad",
     transaction_country:"IN",cardholder_country:"IN",
-    timestamp:new Date().toISOString(),is_online:false
+    timestamp:new Date(DEMO_NOW).toISOString(),is_online:false
   },
   high_value_new:{
     transaction_id:"txn_"+rnd(),card_id:"card_IN_055",amount:89000.00,
     merchant_name:"TechLux World",merchant_id:"merch_AE_881",
     merchant_category:"Electronics",merchant_country:"AE",merchant_city:"Dubai",
     transaction_country:"AE",cardholder_country:"IN",
-    timestamp:new Date().toISOString(),is_online:true,is_new_merchant:true
+    timestamp:new Date(DEMO_NOW).toISOString(),is_online:true,is_new_merchant:true
   },
   ambiguous:{
     transaction_id:"txn_"+rnd(),card_id:"card_IN_033",amount:3200.00,
     merchant_name:"Singapore Duty Free",merchant_id:"merch_SG_220",
     merchant_category:"Retail",merchant_country:"SG",merchant_city:"Singapore",
     transaction_country:"SG",cardholder_country:"IN",
-    timestamp:new Date().toISOString(),is_online:false,
+    timestamp:new Date(DEMO_NOW).toISOString(),is_online:false,
     previous_transaction_country:"IN",
-    previous_transaction_time:new Date(Date.now()-6*60*60*1000).toISOString()
+    previous_transaction_time:new Date(DEMO_NOW-6*60*60*1000).toISOString()
   }
 };
 

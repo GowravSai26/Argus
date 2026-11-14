@@ -7,11 +7,11 @@ where attackers make many small purchases to verify a stolen card works.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 import asyncpg
 
-from agent.db import connect_kwargs
+from agent.db import REFERENCE_TIME, connect_kwargs
 from api.schemas import VelocityResult
 
 # Thresholds — tunable without code changes in production
@@ -28,6 +28,7 @@ VELOCITY_LIMITS = {
 async def check_velocity(
     card_id: str,
     current_transaction_id: str,
+    as_of: datetime | None = None,
 ) -> VelocityResult:
     """
     Check transaction velocity for a card.
@@ -39,7 +40,7 @@ async def check_velocity(
     risk_signals: list[str] = []
 
     try:
-        now = datetime(2026, 6, 19, tzinfo=UTC)
+        now = as_of or REFERENCE_TIME
         cutoff_1h = now - timedelta(hours=1)
         cutoff_24h = now - timedelta(hours=24)
 
@@ -50,11 +51,13 @@ async def check_velocity(
             WHERE card_id = $1
               AND transaction_id != $2
               AND timestamp >= $3
+              AND timestamp < $4
             ORDER BY timestamp DESC
             """,
             card_id,
             current_transaction_id,
             cutoff_24h,
+            now,
         )
 
         rows_1h = [r for r in rows_24h if r["timestamp"] >= cutoff_1h]

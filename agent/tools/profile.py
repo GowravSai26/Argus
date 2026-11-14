@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 
 import asyncpg
 
-from agent.db import connect_kwargs
+from agent.db import REFERENCE_TIME, connect_kwargs
 from api.schemas import CardholderProfileResult
 
 
@@ -22,6 +22,7 @@ async def get_cardholder_profile(
     current_amount: float,
     current_category: str,
     current_country: str,
+    as_of: datetime | None = None,
 ) -> CardholderProfileResult:
     """
     Build a behavioural profile from transaction history and compare
@@ -34,7 +35,7 @@ async def get_cardholder_profile(
     risk_signals: list[str] = []
 
     try:
-        reference_time = datetime(2026, 6, 19, tzinfo=UTC)
+        reference_time = as_of or REFERENCE_TIME
 
         cutoff = reference_time - timedelta(days=90)
 
@@ -46,11 +47,13 @@ async def get_cardholder_profile(
             WHERE card_id = $1
               AND transaction_id != $2
               AND timestamp >= $3
+              AND timestamp < $4
             ORDER BY timestamp DESC
             """,
             card_id,
             current_transaction_id,
             cutoff,
+            reference_time,
         )
 
         fraud_rows = await conn.fetch(
@@ -59,8 +62,10 @@ async def get_cardholder_profile(
             FROM transactions
             WHERE card_id = $1
               AND is_fraud = TRUE
+              AND timestamp < $2
             """,
             card_id,
+            reference_time,
         )
 
         account_row = await conn.fetchrow(
@@ -68,8 +73,10 @@ async def get_cardholder_profile(
             SELECT MIN(timestamp) as first_seen
             FROM transactions
             WHERE card_id = $1
+              AND timestamp < $2
             """,
             card_id,
+            reference_time,
         )
 
         previous_fraud_count = int(fraud_rows[0]["fraud_count"]) if fraud_rows else 0
