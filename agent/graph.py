@@ -18,6 +18,7 @@ State flows:
 from __future__ import annotations
 
 import time
+from datetime import UTC, datetime
 from typing import Any, TypedDict
 
 from langchain_groq import ChatGroq
@@ -60,6 +61,14 @@ class InvestigationState(TypedDict):
 # ---------------------------------------------------------------------------
 
 
+def _txn_time(txn: dict[str, Any]) -> datetime:
+    """The transaction's timestamp as an aware datetime (UTC if none given)."""
+    ts = txn["timestamp"]
+    if isinstance(ts, str):
+        ts = datetime.fromisoformat(ts)
+    return ts if ts.tzinfo else ts.replace(tzinfo=UTC)
+
+
 async def node_transaction_history(state: InvestigationState) -> dict[str, Any]:
     """Pull 30-day transaction history and detect velocity/amount anomalies."""
     from agent.tools.transaction import get_transaction_history
@@ -68,6 +77,7 @@ async def node_transaction_history(state: InvestigationState) -> dict[str, Any]:
     result = await get_transaction_history(
         card_id=txn["card_id"],
         current_transaction_id=txn["transaction_id"],
+        as_of=_txn_time(txn),
     )
     return {
         "transaction_history": result.model_dump(),
@@ -99,6 +109,7 @@ async def node_velocity_check(state: InvestigationState) -> dict[str, Any]:
     result = await check_velocity(
         card_id=txn["card_id"],
         current_transaction_id=txn["transaction_id"],
+        as_of=_txn_time(txn),
     )
     return {
         "velocity": result.model_dump(),
@@ -108,21 +119,15 @@ async def node_velocity_check(state: InvestigationState) -> dict[str, Any]:
 
 async def node_geolocation_check(state: InvestigationState) -> dict[str, Any]:
     """Detect impossible travel between consecutive transactions."""
-    from datetime import datetime
-
     from agent.tools.geolocation import check_geolocation
 
     txn = state["transaction"]
-    timestamp = txn["timestamp"]
-    if isinstance(timestamp, str):
-        timestamp = datetime.fromisoformat(timestamp)
-
     result = await check_geolocation(
         card_id=txn["card_id"],
         current_transaction_id=txn["transaction_id"],
         transaction_country=txn["merchant_country"],
         cardholder_country=txn["cardholder_country"],
-        transaction_timestamp=timestamp,
+        transaction_timestamp=_txn_time(txn),
     )
     return {
         "geolocation": result.model_dump(),
@@ -141,6 +146,7 @@ async def node_profile_check(state: InvestigationState) -> dict[str, Any]:
         current_amount=txn["amount"],
         current_category=txn["merchant_category"],
         current_country=txn["merchant_country"],
+        as_of=_txn_time(txn),
     )
     return {
         "cardholder_profile": result.model_dump(),

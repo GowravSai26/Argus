@@ -62,11 +62,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
 
     # A fresh hosted database (e.g. Neon) starts empty: load the seed data once.
-    from agent.db import seed_if_empty
+    from agent.db import load_eval_fixtures, seed_if_empty
 
     try:
         if await seed_if_empty():
             logger.info("Database was empty, loaded data/seed.sql")
+        await load_eval_fixtures()
     except Exception as exc:  # the API should still start so /health answers
         logger.error(f"Could not check or seed the database: {exc}")
 

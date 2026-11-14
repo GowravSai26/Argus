@@ -7,11 +7,11 @@ derives risk signals from spending patterns.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 import asyncpg
 
-from agent.db import connect_kwargs
+from agent.db import REFERENCE_TIME, connect_kwargs
 from api.schemas import TransactionHistoryResult
 
 
@@ -23,6 +23,7 @@ async def get_db_connection() -> asyncpg.Connection:
 async def get_transaction_history(
     card_id: str,
     current_transaction_id: str,
+    as_of: datetime | None = None,
 ) -> TransactionHistoryResult:
     """
     Fetch transaction history for a card and derive risk signals.
@@ -30,6 +31,7 @@ async def get_transaction_history(
     Args:
         card_id: The hashed card identifier.
         current_transaction_id: Excluded from history to avoid self-reference.
+        as_of: The transaction's timestamp; windows are measured back from it.
 
     Returns:
         TransactionHistoryResult with stats and risk signals.
@@ -38,7 +40,7 @@ async def get_transaction_history(
     risk_signals: list[str] = []
 
     try:
-        now = datetime(2026, 6, 19, tzinfo=UTC)
+        now = as_of or REFERENCE_TIME
         cutoff_30d = now - timedelta(days=30)
         cutoff_24h = now - timedelta(hours=24)
         cutoff_1h = now - timedelta(hours=1)
@@ -51,11 +53,13 @@ async def get_transaction_history(
             WHERE card_id = $1
               AND transaction_id != $2
               AND timestamp >= $3
+              AND timestamp < $4
             ORDER BY timestamp DESC
             """,
             card_id,
             current_transaction_id,
             cutoff_30d,
+            now,
         )
 
         if not rows:

@@ -9,6 +9,7 @@ POSTGRES_* variables are used instead.
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -47,6 +48,12 @@ def connect_kwargs() -> dict[str, Any]:
 
 
 SEED_FILE = Path(__file__).resolve().parent.parent / "data" / "seed.sql"
+EVAL_FIXTURES_FILE = Path(__file__).resolve().parent.parent / "data" / "eval_fixtures.sql"
+
+# The seed data describes the world as of this moment. Tools measure their
+# time windows back from the transaction's own timestamp; this is only the
+# fallback when a caller doesn't pass one.
+REFERENCE_TIME = datetime(2026, 6, 19, tzinfo=UTC)
 
 
 async def seed_if_empty() -> bool:
@@ -65,5 +72,21 @@ async def seed_if_empty() -> bool:
             return False
         await conn.execute(SEED_FILE.read_text(encoding="utf-8"))
         return True
+    finally:
+        await conn.close()
+
+
+async def load_eval_fixtures() -> None:
+    """
+    Insert the history behind tests/evals/cases.json (data/eval_fixtures.sql).
+
+    Safe to run on every startup: every row uses ON CONFLICT DO NOTHING, so an
+    existing database (e.g. the live Neon one) picks up new fixture rows once.
+    """
+    import asyncpg
+
+    conn = await asyncpg.connect(**connect_kwargs())
+    try:
+        await conn.execute(EVAL_FIXTURES_FILE.read_text(encoding="utf-8"))
     finally:
         await conn.close()

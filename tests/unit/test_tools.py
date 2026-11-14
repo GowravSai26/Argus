@@ -260,6 +260,37 @@ class TestVelocity:
         assert result.transactions_last_1h == 0
         assert result.risk_signals == []
 
+    @pytest.mark.asyncio
+    async def test_windows_are_measured_from_the_transaction_time(self):
+        """The 1h/24h windows end at the transaction's own timestamp, not a fixed clock."""
+        from datetime import timedelta
+
+        txn_time = datetime(2024, 1, 15, 23, 55, tzinfo=UTC)
+        mock_rows = [
+            {
+                "amount": 1.0,
+                "merchant_id": f"m{i}",
+                "merchant_country": "US",
+                "timestamp": txn_time - timedelta(minutes=4 * i + 3),
+            }
+            for i in range(5)
+        ]
+
+        with patch("agent.tools.velocity.asyncpg.connect") as mock_connect:
+            mock_conn = AsyncMock()
+            mock_conn.fetch.return_value = mock_rows
+            mock_connect.return_value = mock_conn
+
+            from agent.tools.velocity import check_velocity
+
+            result = await check_velocity("card_001", "txn_001", as_of=txn_time)
+
+        # SQL bounds: [txn_time - 24h, txn_time)
+        args = mock_conn.fetch.call_args.args
+        assert args[-2:] == (txn_time - timedelta(hours=24), txn_time)
+        assert result.transactions_last_1h == 5
+        assert result.velocity_exceeded is True
+
 
 # ---------------------------------------------------------------------------
 # Geolocation tests
