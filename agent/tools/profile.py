@@ -7,12 +7,12 @@ behavioural profile to detect anomalies.
 
 from __future__ import annotations
 
-import os
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 
 import asyncpg
 
+from agent.db import connect_kwargs
 from api.schemas import CardholderProfileResult
 
 
@@ -30,13 +30,7 @@ async def get_cardholder_profile(
     A transaction that deviates significantly from established patterns
     is a strong fraud signal even if no single other check fires.
     """
-    conn = await asyncpg.connect(
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=int(os.getenv("POSTGRES_PORT", "5432")),
-        user=os.getenv("POSTGRES_USER", "argus"),
-        password=os.getenv("POSTGRES_PASSWORD", "argus_secret"),
-        database=os.getenv("POSTGRES_DB", "argus_db"),
-    )
+    conn = await asyncpg.connect(**connect_kwargs())
     risk_signals: list[str] = []
 
     try:

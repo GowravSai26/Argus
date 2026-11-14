@@ -54,12 +54,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     load_dotenv()
 
-    required_vars = ["ANTHROPIC_API_KEY", "LANGSMITH_API_KEY"]
+    required_vars = ["GROQ_API_KEY"]
     missing = [v for v in required_vars if not os.getenv(v)]
     if missing:
         logger.warning(
             f"Missing environment variables: {missing}. Agent will not function without these."
         )
+
+    # A fresh hosted database (e.g. Neon) starts empty: load the seed data once.
+    from agent.db import seed_if_empty
+
+    try:
+        if await seed_if_empty():
+            logger.info("Database was empty, loaded data/seed.sql")
+    except Exception as exc:  # the API should still start so /health answers
+        logger.error(f"Could not check or seed the database: {exc}")
 
     logger.info("Argus API starting up")
     yield

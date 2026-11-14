@@ -1,0 +1,15 @@
+# Render Blueprint — free web service running the Docker image.
+# The database lives on Neon (free, does not expire); paste its connection
+# string into DATABASE_URL when Render asks for it.
+services:
+  - type: web
+    name: argus-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false

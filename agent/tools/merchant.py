@@ -6,10 +6,9 @@ Looks up the merchant's fraud rate, chargeback rate, and category risk.
 
 from __future__ import annotations
 
-import os
-
 import asyncpg
 
+from agent.db import connect_kwargs
 from api.schemas import MerchantRiskResult
 
 HIGH_RISK_CATEGORIES = {
@@ -33,13 +32,7 @@ async def get_merchant_risk(
 
     Falls back to category-level heuristics if merchant is unknown.
     """
-    conn = await asyncpg.connect(
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=int(os.getenv("POSTGRES_PORT", "5432")),
-        user=os.getenv("POSTGRES_USER", "argus"),
-        password=os.getenv("POSTGRES_PASSWORD", "argus_secret"),
-        database=os.getenv("POSTGRES_DB", "argus_db"),
-    )
+    conn = await asyncpg.connect(**connect_kwargs())
     risk_signals: list[str] = []
 
     try:

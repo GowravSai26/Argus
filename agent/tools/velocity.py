@@ -7,11 +7,11 @@ where attackers make many small purchases to verify a stolen card works.
 
 from __future__ import annotations
 
-import os
 from datetime import UTC, datetime, timedelta
 
 import asyncpg
 
+from agent.db import connect_kwargs
 from api.schemas import VelocityResult
 
 # Thresholds — tunable without code changes in production
@@ -35,13 +35,7 @@ async def check_velocity(
     Velocity fraud = many transactions in a short window.
     This catches card testing, account takeover, and smurfing patterns.
     """
-    conn = await asyncpg.connect(
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=int(os.getenv("POSTGRES_PORT", "5432")),
-        user=os.getenv("POSTGRES_USER", "argus"),
-        password=os.getenv("POSTGRES_PASSWORD", "argus_secret"),
-        database=os.getenv("POSTGRES_DB", "argus_db"),
-    )
+    conn = await asyncpg.connect(**connect_kwargs())
     risk_signals: list[str] = []
 
     try:
