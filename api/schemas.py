@@ -235,4 +235,4 @@ class HealthResponse(BaseModel):
 
     status: str = "ok"
     version: str = "0.1.0"
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "llama-3.3-70b-versatile"

@@ -7,12 +7,12 @@ and is now being used in London, that is physically impossible.
 
 from __future__ import annotations
 
-import os
 from datetime import UTC, datetime
 from math import asin, cos, radians, sin, sqrt
 
 import asyncpg
 
+from agent.db import connect_kwargs
 from api.schemas import GeolocationResult
 
 # Approximate country centroids (lat, lon) for distance calculation
@@ -65,13 +65,7 @@ async def check_geolocation(
     current transaction country and the last known transaction country
     against the time elapsed and maximum possible travel speed.
     """
-    conn = await asyncpg.connect(
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=int(os.getenv("POSTGRES_PORT", "5432")),
-        user=os.getenv("POSTGRES_USER", "argus"),
-        password=os.getenv("POSTGRES_PASSWORD", "argus_secret"),
-        database=os.getenv("POSTGRES_DB", "argus_db"),
-    )
+    conn = await asyncpg.connect(**connect_kwargs())
     risk_signals: list[str] = []
 
     try:

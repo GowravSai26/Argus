@@ -1,390 +1,232 @@
 # 👁 Argus — Autonomous Fraud Investigation Agent
 
-> *Named after Argus Panoptes — the 100-eyed giant of Greek mythology who never slept, assigned to guard something priceless.*
+> *Named after Argus Panoptes, the hundred-eyed giant of Greek mythology who never slept.*
 
-**Visa processes 700 million transactions a day. Human fraud analysts investigate flagged cases manually, using 6 different internal tools, taking 15–30 minutes per case. Argus replicates that entire investigation workflow autonomously — pulling transaction history, checking merchant risk, validating geolocation plausibility, and detecting velocity anomalies — producing a full investigation report with **risk score (0–100), verdict, and confidence score** in under 2.5 seconds.**
+When a card transaction is flagged, a human fraud analyst spends 15–30 minutes checking it by hand: transaction history, the merchant, where the card was last used, how fast it is being used. **Argus does that investigation with an AI agent.** The agent decides which checks to run, collects the evidence from a Postgres database, and a deterministic scoring engine turns that evidence into a **risk score (0–100)** and a verdict: `BLOCK`, `ALLOW` or `ESCALATE`.
 
-[![Precision](https://img.shields.io/badge/Precision-100%25-10B981?style=flat)](/)
-[![Recall](https://img.shields.io/badge/Recall-100%25-10B981?style=flat)](/)
-[![Evals](https://img.shields.io/badge/Evals-10%2F10-F59E0B?style=flat)](/)
-[![Live](https://img.shields.io/badge/Live-Railway-6B6BF9?style=flat)](https://argus-production-7aa3.up.railway.app)
+The one design decision that matters most: **the LLM gathers evidence, but it does not make the final call.** A plain, testable scoring function does.
+
+[![Live demo](https://img.shields.io/badge/Live_demo-Vercel-000?style=flat)](https://argus-seven-black.vercel.app/)
+[![API](https://img.shields.io/badge/API-Render-46E3B7?style=flat)](https://argus-api.onrender.com/docs)
 
 ---
 
 ## 🔴 Live Demo
 
-**[argus.vercel.app](https://argus-seven-black.vercel.app/)** — Submit a real transaction. Watch the agent investigate it.
+**[argus-seven-black.vercel.app](https://argus-seven-black.vercel.app/)** — pick a scenario or edit the transaction JSON and watch the agent investigate it.
+
+> The API runs on Render's free tier, which sleeps when nobody uses it. The page wakes it up as soon as it opens; the first investigation can take up to a minute. After that, responses come back in a few seconds.
+
+Interactive API docs: **[argus-api.onrender.com/docs](https://argus-api.onrender.com/docs)**
 
 ---
 
-## The Problem
+## How it works
 
-Fraud analysts at payment networks spend 15–30 minutes per flagged case, manually cross-referencing:
-- Transaction history across multiple systems
-- Merchant risk databases
-- Cardholder behavioral profiles
-- Geolocation plausibility
-- Velocity and pattern signals
+1. A flagged transaction arrives at the FastAPI endpoint and is validated with Pydantic.
+2. A **LangGraph** agent (Llama 3.3 70B on Groq) decides which tools to call, one at a time, based on what it has seen so far:
 
-At scale, this is impossible. Argus solves it.
+   | Tool | What it checks |
+   |---|---|
+   | `get_transaction_history` | 30-day spend, transaction count, amount anomalies |
+   | `check_merchant_risk` | Merchant fraud rate, chargeback rate, high-risk category |
+   | `check_velocity` | Transactions in the last 1h / 24h (card testing) |
+   | `check_geolocation_plausibility` | Is the travel since the last transaction physically possible? |
+   | `get_cardholder_profile` | Home country, usual categories, account age |
 
----
+3. Every tool returns structured data plus human-readable **risk signals**.
+4. The **scoring engine** (in `api/main.py`) weights those signals, ignores missing data, and returns the verdict.
 
-## What Argus Does
+## 🧠 Scoring engine (deterministic guardrail)
 
-When a suspicious transaction is flagged, Argus:
-
-1. **Receives** the transaction as a structured event via REST API
-2. **Autonomously invokes tools** — no human direction needed:
-   - `get_transaction_history` — last N transactions for this card
-   - `check_merchant_risk` — fraud rate, category, country risk score
-   - `check_velocity` — transaction count in sliding time window
-   - `check_geolocation_plausibility` — is this travel physically possible?
-   - `get_cardholder_profile` — behavioral baseline, home country, spend patterns
-   - `flag_for_human_review` — escalation when confidence is below threshold
-3. **Reasons** over collected signals using Claude with full tool-use
-4. **Delivers a verdict**: `BLOCK` · `ALLOW` · `ESCALATE`
-5. **Returns** a structured investigation report with confidence score and full justification
-
-Total time: **< 2.5 seconds**. Every step is traced in LangSmith.
-
-## 🧠 Fraud Scoring Engine (Deterministic Guardrail)
-
-Argus does not rely solely on LLM reasoning for final decisions.
-
-It uses a **hybrid architecture**:
-- LLM → gathers signals via tools
-- Deterministic engine → computes final verdict
-
-### How scoring works:
-
-- Each risk signal is assigned a **weight**
-- Signals are aggregated into a **risk score (0–100)**
-- Missing data (e.g., no history) is treated as **uncertainty, not risk**
-
-### Example:
-| Signal        | Weight         |
-|---------------|----------------|
+| Signal | Weight |
+|---|---|
+| Impossible travel | +40 |
+| Velocity anomaly | +35 |
 | Cross-border transaction | +25 |
-| Impossible travel        | +40 |
-| Velocity anomaly         | +35 |
-| Unknown merchant         | +10 |
+| High-risk merchant / category | +25 |
+| Amount anomaly | +25 |
+| Unusual country | +20 |
+| New account | +15 |
+| Unknown merchant | +10 |
 
-### Decision thresholds:
-| Score | Verdict  |
-|-------|----------|
-| 0–29  | ALLOW    |
+The score is capped at 100.
+
+| Score | Verdict |
+|---|---|
+| 0–29 | ALLOW |
 | 30–59 | ESCALATE |
-| 60+   | BLOCK    |
-### Key Design Principle
+| 60+ | BLOCK |
 
-> Absence of data ≠ fraud signal
+**Absence of data is not a fraud signal.** A brand-new card with no history is treated as *uncertain*, not *risky*, so new customers are not blocked just for being new.
 
-New users are handled via **cold-start logic**, preventing bias.
+Why not let the LLM decide? LLM verdicts can change between runs and are hard to audit. Splitting the job means the LLM handles the open-ended part (which evidence to gather), while the decision is repeatable and can be unit-tested and explained line by line.
 
-This makes Argus:
-- Explainable
-- Deterministic
-- Production-ready
-
-## ✨ Features
-
-- 🔍 Real-time fraud investigation (< 2.5s)
-- 🧠 Multi-tool reasoning pipeline:
-  - Transaction history analysis
-  - Merchant risk scoring
-  - Velocity anomaly detection
-  - Geolocation plausibility checks
-  - Cardholder behavioral profiling
-- ⚠️ Clear risk signal extraction (human-readable)
-- 📊 Structured investigation breakdown (per tool)
-- 🧮 Fraud risk scoring (0–100) with weighted signals
-- ⚖️ Separation of **risk vs uncertainty** (missing data not penalized)
-- 🧊 Cold-start aware logic for new users
-- 📈 Confidence scoring for every decision
-- 🎨 Interactive UI with:
-  - Risk signals panel
-  - Investigation breakdown dashboard
-  - Smooth result animations
 ---
 
-## Evaluation Results
+## Evaluation
 
-```
-============================================================
-  ARGUS EVALUATION HARNESS — 10 Cases
-============================================================
-  eval_001  Impossible travel — US card used in Nigeria 30 min after US usage
-            ✓ expected=BLOCK     predicted=BLOCK     confidence=0.90
-  eval_002  Normal grocery purchase in home country
-            ✓ expected=ALLOW     predicted=ALLOW     confidence=0.80
-  eval_003  High-value electronics at new merchant abroad
-            ✓ expected=BLOCK     predicted=BLOCK     confidence=0.90
-  eval_004  Regular coffee shop — cardholder known to travel
-            ✓ expected=ALLOW     predicted=ALLOW     confidence=0.80
-  eval_005  Card testing — 5 micro-transactions in 20 minutes
-            ✓ expected=BLOCK     predicted=BLOCK     confidence=0.90
-  eval_006  Ambiguous cross-border — plausible timing
-            ✓ expected=ESCALATE  predicted=ESCALATE  confidence=0.60
-  eval_007  Crypto exchange — high risk category, large amount
-            ✓ expected=BLOCK     predicted=BLOCK     confidence=0.90
-  eval_008  Pharmacy — low amount, home country
-            ✓ expected=ALLOW     predicted=ALLOW     confidence=0.80
-  eval_009  Wire transfer at odd hour from foreign country
-            ✓ expected=BLOCK     predicted=BLOCK     confidence=0.90
-  eval_010  Utilities bill — predictable recurring charge
-            ✓ expected=ALLOW     predicted=ALLOW     confidence=0.80
-============================================================
-  Precision : 1.0000    Recall : 1.0000    F1 : 1.0000
-  10/10 correct — EVAL PASSED
-============================================================
-```
+`tests/evals/run_evals.py` runs 10 hand-labelled scenarios against the live agent:
+
+| Case | Scenario | Expected |
+|---|---|---|
+| eval_001 | US card used in Nigeria 30 min after a US purchase | BLOCK |
+| eval_002 | Normal grocery purchase in home country | ALLOW |
+| eval_003 | High-value electronics at a new merchant abroad | BLOCK |
+| eval_004 | Coffee shop, cardholder known to travel | ALLOW |
+| eval_005 | Card testing — 5 micro-transactions in 20 minutes | BLOCK |
+| eval_006 | Ambiguous cross-border, plausible timing | ESCALATE |
+| eval_007 | Crypto exchange, large amount | BLOCK |
+| eval_008 | Pharmacy, low amount, home country | ALLOW |
+| eval_009 | Wire transfer at an odd hour from abroad | BLOCK |
+| eval_010 | Recurring utilities bill | ALLOW |
+
+The current version gets all 10 right.
+
+**Limitations, stated plainly:**
+- These are 10 scenarios I wrote myself, against synthetic data from `data/generate.py`. They show the pipeline behaves as designed; they are **not** a measure of real-world fraud detection accuracy.
+- `confidence_score` currently reflects how many tools returned data, not a calibrated probability.
+- Signals are matched to weights by keyword, so a reworded signal from a tool would not be scored.
+
+Next steps: evaluate on a public labelled dataset (e.g. the Kaggle credit-card fraud set), calibrate confidence, and replace keyword matching with typed signal codes.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLIENT / API                         │
-│              POST /investigate  {transaction}               │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────────┐
-│                    FastAPI (api/main.py)                    │
-│              Pydantic schema validation                     │
-│              Request routing + error handling               │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────────┐
-│                 LangGraph Agent (agent/graph.py)            │
-│                                                             │
-│   [START] → [investigate_node] → [tool_node] → [END]        │
-│                     ↑                  │                    │
-│                     └──────────────────┘                    │
-│               (loops until agent stops calling tools)       │
-│                                                             │
-│   Tools available to agent:                                 │
-│   • get_transaction_history(card_id, limit)                 │
-│   • check_merchant_risk(merchant_id)                        │
-│   • check_velocity(card_id, window_minutes)                 │
-│   • check_geolocation_plausibility(loc_a, loc_b, minutes)   │
-│   • get_cardholder_profile(card_id)                         │
-│   • flag_for_human_review(case_id, reason)                  │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-        ┌─────────────┴─────────────┐
-        │                           │
-┌───────▼───────┐         ┌─────────▼────────┐
-│  PostgreSQL   │         │   Claude API     │
-│  Transaction  │         │   (tool-use)     │
-│  history +    │         │   Reasoning ove  │
-│  cardholder   │         │   collected      │
-│  profiles     │         │   signals        │
-└───────────────┘         └──────────────────┘
-        │
-┌───────▼───────────────────────────────────────────────────┐
-│                      LangSmith                            │
-│   Full trace of every agent run — tool calls, LLM         │
-│   responses, latency per step, token usage                │
-└───────────────────────────────────────────────────────────┘
+            POST /agent-investigate  {transaction}
+                          │
+┌─────────────────────────▼───────────────────────────┐
+│ FastAPI (api/main.py) — Pydantic validation         │
+└─────────────────────────┬───────────────────────────┘
+                          │
+┌─────────────────────────▼───────────────────────────┐
+│ LangGraph agent (agent/agent_graph.py)              │
+│   LLM picks next tool → tool runs → repeat → done   │
+└──────────┬──────────────────────────────┬───────────┘
+           │                              │
+┌──────────▼──────────┐       ┌───────────▼──────────┐
+│ PostgreSQL (Neon)   │       │ Groq — Llama 3.3 70B │
+│ transactions,       │       │ tool selection +     │
+│ merchants, profiles │       │ written reasoning    │
+└─────────────────────┘       └──────────────────────┘
+                          │
+┌─────────────────────────▼───────────────────────────┐
+│ Scoring engine → risk score, verdict, risk level    │
+└─────────────────────────────────────────────────────┘
 ```
 
+There are two endpoints:
+- `POST /agent-investigate` — the agentic flow above, used by the demo.
+- `POST /investigate` — an earlier fixed pipeline (`agent/graph.py`) that runs every tool in order; it supports optional LangSmith tracing.
+
 ---
 
+## Tech stack
 
-
-## Scaling to Production
-
-Argus is designed to scale horizontally. Here's how it grows:
-
-| Scale | Architecture |
+| Layer | Technology |
 |---|---|
-| **Current** | Single FastAPI instance on Railway, PostgreSQL |
-| **10× traffic** | Add Gunicorn workers, read replicas for PostgreSQL |
-| **100× traffic** | Kubernetes deployment, Redis cache for cardholder profiles, async task queue (Celery/ARQ) |
-| **Visa-scale** | Kafka event streaming, feature store (Feast), model serving (Triton), multi-region deployment |
-
-Key design decisions that enable scaling:
-- **Stateless API** — each request carries all context, horizontal scaling is trivial
-- **Connection pooling** — SQLAlchemy pool, no connection exhaustion under load
-- **Tool isolation** — each tool is a pure function, independently cacheable
-- **Async-ready** — FastAPI async endpoints, non-blocking I/O throughout
+| Agent | LangGraph |
+| LLM | Llama 3.3 70B via Groq |
+| API | FastAPI + Pydantic v2 |
+| Database | PostgreSQL (asyncpg) |
+| Frontend | Single static HTML page on Vercel |
+| Hosting | Render (API, free tier) + Neon (Postgres, free tier) |
+| Containers | Docker, docker-compose |
+| CI | GitHub Actions — ruff lint + unit tests |
 
 ---
 
-## Tech Stack
-
-| Layer | Technology | Why |
-|---|---|---|
-| Agent framework | LangGraph | State machine with explicit nodes/edges — inspectable, debuggable, production-ready |
-| LLM | Claude API (tool-use) | Best-in-class tool-use reliability and reasoning quality |
-| Backend | FastAPI + Pydantic v2 | Fully typed, async, automatic OpenAPI docs |
-| Database | PostgreSQL | ACID compliance, complex queries on transaction history |
-| Observability | LangSmith | Full agent trace — every tool call, every LLM response, latency, cost |
-| Containerization | Docker + docker-compose | One-command local setup, production parity |
-| Deployment | Railway | Zero-config PostgreSQL + app hosting |
-| CI/CD | GitHub Actions | Lint → test → build on every push |
-| Code quality | ruff + pre-commit | Zero lint warnings, consistent formatting enforced at commit |
-
-**Final decision is NOT taken by the LLM.**  
-A deterministic fraud scoring layer ensures consistency and prevents hallucinated decisions.
----
-
-## Project Structure
+## Project structure
 
 ```
 argus/
-├── .github/
-│   └── workflows/
-│       └── ci.yml               # Lint → test → docker build on every push
+├── .github/workflows/ci.yml   # Lint + unit tests on every push
 ├── agent/
-│   ├── graph.py                 # LangGraph state machine definition
-│   ├── nodes.py                 # Agent reasoning nodes
-│   ├── state.py                 # Typed agent state (TypedDict)
-│   └── tools/
-│       ├── transaction.py       # Transaction history lookup
-│       ├── merchant.py          # Merchant risk scoring
-│       ├── velocity.py          # Velocity / rate detection
-│       ├── geolocation.py       # Travel plausibility check
-│       ├── profile.py           # Cardholder behavioral profile
-│       └── escalation.py        # Human review flagging
+│   ├── agent_graph.py         # LangGraph agent used by /agent-investigate
+│   ├── graph.py               # Fixed pipeline used by /investigate
+│   ├── db.py                  # DB connection settings + first-run seeding
+│   └── tools/                 # transaction, merchant, velocity, geolocation, profile
 ├── api/
-│   ├── main.py                  # FastAPI app, CORS, lifespan
-│   └── schemas.py               # Pydantic request/response models
+│   ├── main.py                # FastAPI app + scoring engine
+│   └── schemas.py             # Request / response models
 ├── data/
-│   ├── generate.py              # Synthetic transaction data generator
-│   └── seed.sql                 # DB schema + seed data
+│   ├── generate.py            # Synthetic data generator
+│   └── seed.sql               # Schema + seed data
+├── frontend/index.html        # Demo UI
 ├── tests/
-│   ├── unit/
-│   │   ├── test_tools.py        # Tool functions tested in isolation
-│   │   └── test_schemas.py      # Schema validation tests
-│   └── evals/
-│       ├── cases.json           # 10 labelled evaluation cases
-│       └── run_evals.py         # Precision / recall measurement
-├── docs/
-│   └── ARCHITECTURE.md          # System design, decisions, scale analysis
-├── docker-compose.yml           # App + PostgreSQL, one command
+│   ├── unit/test_tools.py     # Tools tested with a mocked database
+│   └── evals/                 # 10 labelled scenarios + runner
 ├── Dockerfile
-├── pyproject.toml               # ruff config, pytest config, dependencies
-├── .pre-commit-config.yaml      # Enforced before every commit
-└── README.md
+├── docker-compose.yml
+└── render.yaml                # Render deploy blueprint
 ```
 
 ---
 
-## Running Locally
+## Run locally
 
 ```bash
-# 1. Clone
-git clone https://github.com/gowravsai/argus
-cd argus
-
-# 2. Set environment variables
-cp .env.example .env
-# Add your ANTHROPIC_API_KEY and LANGSMITH_API_KEY
-
-# 3. Start everything
+git clone https://github.com/GowravSai26/Argus
+cd Argus
+cp .env.example .env        # add your free GROQ_API_KEY from console.groq.com
 docker-compose up
-
-# 4. Hit the API
-curl -X POST http://localhost:8000/investigate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "transaction_id": "txn_demo_001",
-    "card_id": "card_US_001",
-    "amount": 1850.00,
-    "merchant_name": "Lagos Electronics Hub",
-    "merchant_country": "NG",
-    "cardholder_country": "US",
-    "timestamp": "2024-01-15T14:30:00Z",
-    "previous_transaction_country": "US",
-    "previous_transaction_time": "2024-01-15T14:00:00Z"
-  }'
-
-# 5. Run evals
-docker exec -w /app argus-api-1 python tests/evals/run_evals.py
 ```
+
+Then open http://localhost:8000/docs, or try:
+
+```bash
+curl -X POST http://localhost:8000/agent-investigate \
+  -H "Content-Type: application/json" \
+  -d '{"transaction": {
+        "transaction_id": "txn_demo_001",
+        "card_id": "card_US_001",
+        "amount": 1850.00,
+        "merchant_id": "merch_NG_001",
+        "merchant_name": "Lagos Electronics Hub",
+        "merchant_category": "Electronics",
+        "merchant_country": "NG",
+        "merchant_city": "Lagos",
+        "transaction_country": "NG",
+        "cardholder_country": "US",
+        "timestamp": "2026-06-19T10:30:00Z",
+        "is_online": false
+      }}'
+```
+
+Run the evals: `docker exec -w /app argus-api-1 python tests/evals/run_evals.py`
+
+## Deploy for free (Render + Neon)
+
+1. **Database:** create a free project at [neon.com](https://neon.com) and copy its connection string.
+2. **API:** on [render.com](https://render.com), choose *New → Blueprint* and pick this repo. Render reads `render.yaml` and asks for two values: `DATABASE_URL` (the Neon string) and `GROQ_API_KEY`.
+3. On first start, the API loads `data/seed.sql` into the empty database by itself.
+4. If Render gives the service a URL other than `argus-api.onrender.com`, update `API_BASE` near the bottom of `frontend/index.html`.
 
 ---
 
-## API Reference
+## Example response
 
-### `POST /investigate`
-
-Submit a transaction for autonomous investigation.
-
-**Request:**
-```json
-{
-  "transaction_id": "txn_ZPDJ1287",
-  "card_id": "card_IN_055",
-  "amount": 89000,
-  "merchant_name": "TechLux World",
-  "merchant_id": "merch_AE_881",
-  "merchant_category": "Electronics",
-  "merchant_country": "AE",
-  "merchant_city": "Dubai",
-  "transaction_country": "AE",
-  "cardholder_country": "IN",
-  "timestamp": "2026-04-16T11:57:21.685Z",
-  "is_online": true,
-  "is_new_merchant": true
-}
-```
-
-**Response:**
 ```json
 {
   "recommendation": "BLOCK",
-  "confidence_score": 0.90,
-  "risk_score": 72,
+  "risk_score": 75,
   "risk_level": "CRITICAL",
-  "reasoning": "The transaction is flagged due to multiple high-risk factors including cross-border usage, high-risk merchant category, and high transaction amount.",
+  "confidence_score": 1.0,
+  "reasoning": "High-risk transaction detected (score=75). ...",
   "risk_signals": [
-    "Cross-border transaction: card from US, used in NG",
-    "High-risk merchant category: Electronics",
-    "No transaction history found — new or inactive card"
+    "cross-border transaction: card from in, used in ae",
+    "high-risk merchant category: electronics",
+    "amount anomaly: ..."
   ],
-  "tool_results": {
-    "transaction_history": {
-      "total_transactions_30d": 0,
-      "total_spend_30d": 0
-    },
-    "merchant_risk": {
-      "fraud_rate_percent": 5,
-      "is_high_risk_category": true
-    },
-    "velocity": {
-      "transactions_last_1h": 0
-    },
-    "geolocation": {
-      "is_cross_border": true,
-      "is_impossible_travel": false
-    },
-    "cardholder_profile": {
-      "account_age_days": 0
-    }
-  },
-  "duration_ms": 1847
+  "tool_results": { "transaction_history": {}, "merchant_risk": {}, "velocity": {}, "geolocation": {}, "cardholder_profile": {} }
 }
-
 ```
-Full interactive docs: **[argus-production-7aa3.up.railway.app/docs](https://argus-production-7aa3.up.railway.app/docs)**
-
----
-
-## The Name - ARGUS
-
-In Greek mythology, **Argus Panoptes** (Ἄργος Πανόπτης — "the all-seeing") was a giant with 100 eyes. He never slept. He was assigned to guard something of immense value, watching from every angle simultaneously.
-
-Visa guards $13 trillion in annual payment volume. Argus watches every flagged transaction the same way — with 100 eyes, never sleeping, never missing a signal.
 
 ---
 
 ## Author
 
-**Gowrav Sai Veeramallu**  
-Agentic AI Engineer · Gen AI  
-
+**Gowrav Sai Veeramallu** — Agentic AI Engineer · Gen AI
 [LinkedIn](https://www.linkedin.com/in/Gowrav-Sai-Veeramallu) · [GitHub](https://github.com/GowravSai26)

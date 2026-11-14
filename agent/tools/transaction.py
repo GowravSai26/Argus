@@ -7,23 +7,17 @@ derives risk signals from spending patterns.
 
 from __future__ import annotations
 
-import os
 from datetime import UTC, datetime, timedelta
 
 import asyncpg
 
+from agent.db import connect_kwargs
 from api.schemas import TransactionHistoryResult
 
 
 async def get_db_connection() -> asyncpg.Connection:
     """Create a single database connection."""
-    return await asyncpg.connect(
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=int(os.getenv("POSTGRES_PORT", "5432")),
-        user=os.getenv("POSTGRES_USER", "argus"),
-        password=os.getenv("POSTGRES_PASSWORD", "argus_secret"),
-        database=os.getenv("POSTGRES_DB", "argus_db"),
-    )
+    return await asyncpg.connect(**connect_kwargs())
 
 
 async def get_transaction_history(
