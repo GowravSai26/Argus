@@ -14,7 +14,7 @@ The one design decision that matters most: **the LLM gathers evidence, but it do
 
 ## 🔴 Live Demo
 
-**[argus-seven-black.vercel.app](https://argus-seven-black.vercel.app/)** — pick a scenario or edit the transaction JSON and watch the agent investigate it.
+**[argus-seven-black.vercel.app](https://argus-seven-black.vercel.app/)** — pick a scenario or edit the transaction JSON and watch the agent investigate it. Scenarios are dated 19 June 2026, the moment the sample database describes; every check looks back from the transaction's own timestamp.
 
 > The API runs on Render's free tier, which sleeps when nobody uses it. The page wakes it up as soon as it opens; the first investigation can take up to a minute. After that, an investigation typically takes about 10 seconds (the agent makes six LLM calls, and Groq's free tier rate-limits them).
 
@@ -71,31 +71,34 @@ Why not let the LLM decide? LLM verdicts can change between runs and are hard to
 
 ## Evaluation
 
-`tests/evals/run_evals.py` sends 10 hand-labelled cases (`tests/evals/cases.json`) to a running API's `POST /agent-investigate` — the same agent + scoring engine the demo uses. Latest run, against the **live API** on 2026-11-14:
+`tests/evals/run_evals.py` sends 10 hand-labelled cases (`tests/evals/cases.json`) to a running API's `POST /agent-investigate` — the same agent + scoring engine the demo uses. Each case has matching history in `data/eval_fixtures.sql` (loaded on startup), so the velocity, impossible-travel and profile checks actually run. Latest run, against the **live API** on 2026-11-14:
 
 | Case | Scenario | Expected | Got |
 |---|---|---|---|
-| eval_001 | US card used in Nigeria 30 min after a US purchase | BLOCK | ✅ BLOCK |
-| eval_002 | Normal grocery purchase in home country | ALLOW | ✅ ALLOW |
-| eval_003 | High-value electronics at a new merchant abroad | BLOCK | ✅ BLOCK |
-| eval_004 | Coffee shop, cardholder known to travel | ALLOW | ✅ ALLOW |
-| eval_005 | Card testing — 5 micro-transactions in 20 minutes | BLOCK | ❌ ESCALATE (score 35) |
-| eval_006 | Ambiguous cross-border, plausible timing | ESCALATE | ✅ ESCALATE |
-| eval_007 | Crypto exchange, large amount | BLOCK | ❌ ESCALATE (score 35) |
-| eval_008 | Pharmacy, low amount, home country | ALLOW | ✅ ALLOW |
-| eval_009 | Wire transfer at an odd hour from abroad | BLOCK | ✅ BLOCK |
-| eval_010 | Recurring utilities bill | ALLOW | ✅ ALLOW |
+| Case | Scenario | Expected | Got | Score | Deciding signals |
+|---|---|---|---|---|---|
+| eval_001 | US card used in Nigeria 30 min after a US purchase | BLOCK | ✅ BLOCK | 100 | impossible travel (10,649 km in 0.5 h), cross-border, amount 24× usual |
+| eval_002 | Normal grocery purchase in home country | ALLOW | ✅ ALLOW | 0 | — |
+| eval_003 | High-value electronics at a new merchant abroad | BLOCK | ✅ BLOCK | 100 | high-risk merchant, cross-border, amount 92× usual |
+| eval_004 | Coffee shop, cardholder known to travel | ALLOW | ✅ ALLOW | 0 | — |
+| eval_005 | Card testing — 5 micro-transactions in 20 minutes | BLOCK | ✅ BLOCK | 100 | velocity: 5 transactions in the last hour |
+| eval_006 | Ambiguous cross-border, plausible timing | ESCALATE | ✅ ESCALATE | 45 | cross-border, unusual country (amount in line with usual spend) |
+| eval_007 | Crypto exchange, large amount | BLOCK | ✅ BLOCK | 80 | high-risk category, amount 199× usual, unusual category |
+| eval_008 | Pharmacy, low amount, home country | ALLOW | ✅ ALLOW | 0 | — |
+| eval_009 | Wire transfer at an odd hour from abroad | BLOCK | ✅ BLOCK | 100 | high-risk category, cross-border, amount 304× usual |
+| eval_010 | Recurring utilities bill | ALLOW | ✅ ALLOW | 0 | — |
 
-**8/10 correct.** No legitimate transaction was blocked (precision 1.0); two fraud cases were escalated to a human instead of blocked (recall 0.6). Each case took 7–16 s on the free tier.
+**10/10 correct** (precision 1.0, recall 1.0). Each case took 7–19 s on the free tier.
+
+Before the eval history existed, the same run scored 8/10: every case ran with no history and an unknown merchant, so the card-testing case was missed and eval_001 was "right" without detecting impossible travel.
 
 **Limitations, stated plainly:**
-- **The eval cases' cards and merchants are not in the seed database.** Every case therefore runs with no transaction history and an unknown merchant, so velocity, impossible-travel and profile checks never fire — the verdicts come only from category, country and amount signals. That is why the card-testing case (eval_005) misses, and why eval_001 is "right" without actually detecting impossible travel. Adding matching history to `data/seed.sql` is the next step.
-- These are 10 scenarios I wrote myself, on synthetic data from `data/generate.py`. They show the pipeline behaves as designed; they are **not** a measure of real-world fraud detection accuracy.
+- **I wrote both the cases and their history** to match each description. A 10/10 here shows the checks and scoring behave as designed on clear-cut cases; it is **not** a measure of real-world fraud detection accuracy, and the rules were not tested on data they weren't written for.
 - `confidence_score` currently reflects how many tools returned data, not a calibrated probability.
 - Signals are matched to weights by keyword, so a reworded signal from a tool would not be scored.
 - The API has no authentication or rate limiting, and allows any origin (CORS `*`).
 
-Next steps: seed history for the eval cards, evaluate on a public labelled dataset (e.g. the Kaggle credit-card fraud set), calibrate confidence, and replace keyword matching with typed signal codes.
+Next steps: evaluate on a public labelled dataset (e.g. the Kaggle credit-card fraud set), calibrate confidence, and replace keyword matching with typed signal codes.
 
 ---
 
@@ -160,7 +163,8 @@ argus/
 │   └── schemas.py             # Request / response models
 ├── data/
 │   ├── generate.py            # Synthetic data generator
-│   └── seed.sql               # Schema + seed data
+│   ├── seed.sql               # Schema + seed data (the world as of 2026-06-19)
+│   └── eval_fixtures.sql      # History behind the 10 eval cases
 ├── frontend/index.html        # Demo UI
 ├── tests/
 │   ├── unit/test_tools.py     # Tools tested with a mocked database
