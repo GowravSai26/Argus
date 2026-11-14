@@ -7,6 +7,7 @@ Every field is typed. Every field has a description. No exceptions.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
@@ -235,4 +236,4 @@ class HealthResponse(BaseModel):
 
     status: str = "ok"
     version: str = "0.1.0"
-    model: str = "llama-3.3-70b-versatile"
+    model: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")

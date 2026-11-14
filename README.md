@@ -7,7 +7,7 @@ When a card transaction is flagged, a human fraud analyst spends 15–30 minutes
 The one design decision that matters most: **the LLM gathers evidence, but it does not make the final call.** A plain, testable scoring function does.
 
 [![Live demo](https://img.shields.io/badge/Live_demo-Vercel-000?style=flat)](https://argus-seven-black.vercel.app/)
-[![API](https://img.shields.io/badge/API-Render-46E3B7?style=flat)](https://argus-api.onrender.com/docs)
+[![API](https://img.shields.io/badge/API-Render-46E3B7?style=flat)](https://argus-api-08ws.onrender.com/docs)
 
 ---
 
@@ -17,14 +17,14 @@ The one design decision that matters most: **the LLM gathers evidence, but it do
 
 > The API runs on Render's free tier, which sleeps when nobody uses it. The page wakes it up as soon as it opens; the first investigation can take up to a minute. After that, responses come back in a few seconds.
 
-Interactive API docs: **[argus-api.onrender.com/docs](https://argus-api.onrender.com/docs)**
+Interactive API docs: **[argus-api-08ws.onrender.com/docs](https://argus-api-08ws.onrender.com/docs)**
 
 ---
 
 ## How it works
 
 1. A flagged transaction arrives at the FastAPI endpoint and is validated with Pydantic.
-2. A **LangGraph** agent (Llama 3.3 70B on Groq) decides which tools to call, one at a time, based on what it has seen so far:
+2. A **LangGraph** agent (GPT-OSS 120B on Groq, set by `GROQ_MODEL`) decides which tools to call, one at a time, based on what it has seen so far:
 
    | Tool | What it checks |
    |---|---|
@@ -107,7 +107,7 @@ Next steps: evaluate on a public labelled dataset (e.g. the Kaggle credit-card f
 └──────────┬──────────────────────────────┬───────────┘
            │                              │
 ┌──────────▼──────────┐       ┌───────────▼──────────┐
-│ PostgreSQL (Neon)   │       │ Groq — Llama 3.3 70B │
+│ PostgreSQL (Neon)   │       │ Groq — GPT-OSS 120B  │
 │ transactions,       │       │ tool selection +     │
 │ merchants, profiles │       │ written reasoning    │
 └─────────────────────┘       └──────────────────────┘
@@ -128,7 +128,7 @@ There are two endpoints:
 | Layer | Technology |
 |---|---|
 | Agent | LangGraph |
-| LLM | Llama 3.3 70B via Groq |
+| LLM | GPT-OSS 120B via Groq (any Groq model via `GROQ_MODEL`) |
 | API | FastAPI + Pydantic v2 |
 | Database | PostgreSQL (asyncpg) |
 | Frontend | Single static HTML page on Vercel |
@@ -202,7 +202,7 @@ Run the evals: `docker exec -w /app argus-api-1 python tests/evals/run_evals.py`
 1. **Database:** create a free project at [neon.com](https://neon.com) and copy its connection string.
 2. **API:** on [render.com](https://render.com), choose *New → Blueprint* and pick this repo. Render reads `render.yaml` and asks for two values: `DATABASE_URL` (the Neon string) and `GROQ_API_KEY`.
 3. On first start, the API loads `data/seed.sql` into the empty database by itself.
-4. If Render gives the service a URL other than `argus-api.onrender.com`, update `API_BASE` near the bottom of `frontend/index.html`.
+4. If Render gives your service a different URL than `argus-api-08ws.onrender.com`, update `API_BASE` near the bottom of `frontend/index.html`.
 
 ---
 
